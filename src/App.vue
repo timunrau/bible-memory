@@ -22,7 +22,7 @@
       </div>
     </header>
 
-    <div class="flex-1 overflow-y-auto max-w-4xl mx-auto w-full px-4 py-4">
+    <div ref="memorizationScrollContainer" class="flex-1 overflow-y-auto max-w-4xl mx-auto w-full px-4 py-4">
       <div class="mb-6">
         
         <!-- Progress Indicator -->
@@ -72,6 +72,7 @@
           <span
             v-for="(word, index) in reviewWords"
             :key="index"
+            :id="`memorize-word-${index}`"
             class="inline-block mr-2"
           >
             <span
@@ -219,7 +220,7 @@
 
     <div class="flex-1 flex flex-col overflow-hidden max-w-4xl mx-auto w-full px-4">
       <!-- Scrollable text box -->
-      <div class="flex-1 overflow-y-auto min-h-0 py-4">
+      <div ref="reviewTextContainer" class="flex-1 overflow-y-auto min-h-0 py-4">
         <div class="bg-white rounded-lg shadow-xl p-4">
           <div
             class="text-xl leading-relaxed text-gray-900 font-serif"
@@ -228,6 +229,7 @@
             <span
               v-for="(word, index) in reviewWords"
               :key="index"
+              :id="`review-word-${index}`"
               class="inline-block mr-2"
             >
               <span v-if="word.revealed" :class="word.incorrect ? 'text-red-600' : 'text-gray-900'">
@@ -832,6 +834,8 @@ export default {
     const reviewWords = ref([])
     const typedLetter = ref('')
     const reviewInput = ref(null)
+    const reviewTextContainer = ref(null)
+    const memorizationScrollContainer = ref(null)
     const reviewMistakes = ref(0) // Track mistakes during review
 
     const newVerse = ref({
@@ -1713,6 +1717,83 @@ export default {
       }
     }
 
+    // Scroll to the next word to be typed if it's near the bottom
+    const scrollToCurrentWord = () => {
+      // Find the next unrevealed word index (the one we're about to type)
+      const nextWordIndex = reviewWords.value.findIndex(w => !w.revealed)
+      
+      if (nextWordIndex === -1) return // All words revealed
+      
+      // Determine which container to use
+      const container = memorizationMode.value ? memorizationScrollContainer.value : reviewTextContainer.value
+      if (!container) return
+      
+      // Wait for DOM to update
+      nextTick(() => {
+        // Use double requestAnimationFrame to ensure DOM is fully updated
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            // Find the word element by ID
+            const wordId = memorizationMode.value ? `memorize-word-${nextWordIndex}` : `review-word-${nextWordIndex}`
+            let wordElement = document.getElementById(wordId)
+            
+            // Fallback: try querySelector if getElementById fails
+            if (!wordElement) {
+              const prefix = memorizationMode.value ? 'memorize-word-' : 'review-word-'
+              wordElement = container.querySelector(`#${prefix}${nextWordIndex}`)
+            }
+            
+            // Another fallback: find by index in all word elements
+            if (!wordElement) {
+              const allWords = container.querySelectorAll('[id^="' + (memorizationMode.value ? 'memorize-word-' : 'review-word-') + '"]')
+              if (allWords[nextWordIndex]) {
+                wordElement = allWords[nextWordIndex]
+              }
+            }
+            
+            if (wordElement) {
+              scrollElementIntoView(wordElement, container)
+            }
+          })
+        })
+      })
+    }
+    
+    // Helper function to scroll an element into view within a container
+    const scrollElementIntoView = (element, container) => {
+      if (!element || !container) return
+      
+      const containerRect = container.getBoundingClientRect()
+      const elementRect = element.getBoundingClientRect()
+      const containerHeight = containerRect.height
+      const currentScrollTop = container.scrollTop
+      
+      // Calculate element position relative to container's scrollable content
+      // elementRect is relative to viewport, containerRect is relative to viewport
+      // The difference + scrollTop gives us position in scrollable content
+      const elementTopInContent = elementRect.top - containerRect.top + currentScrollTop
+      const elementBottomInContent = elementRect.bottom - containerRect.top + currentScrollTop
+      
+      // Visible area in content coordinates
+      const visibleTop = currentScrollTop
+      const visibleBottom = currentScrollTop + containerHeight
+      
+      // Check if element is in bottom portion of visible area
+      const distanceFromVisibleBottom = visibleBottom - elementBottomInContent
+      const threshold = containerHeight * 0.4 // Bottom 40%
+      
+      // Scroll if element is below visible area or in bottom 40%
+      if (elementBottomInContent > visibleBottom || distanceFromVisibleBottom < threshold) {
+        // Target: position element at 30% from top of visible area
+        const targetScroll = elementTopInContent - (containerHeight * 0.3)
+        
+        container.scrollTo({
+          top: Math.max(0, targetScroll),
+          behavior: 'smooth'
+        })
+      }
+    }
+
     // Handle key press events
     const handleKeyPress = (event) => {
       // Allow backspace, delete, arrow keys, etc.
@@ -1769,8 +1850,9 @@ export default {
           }
           typedLetter.value = ''
           
-          // Auto-focus input for next word
+          // Auto-scroll to next word and focus input
           nextTick(() => {
+            scrollToCurrentWord()
             if (reviewInput.value) {
               reviewInput.value.focus()
             }
@@ -1788,8 +1870,9 @@ export default {
           // Vibrate on wrong keypress
           vibrate(50)
           
-          // Auto-focus input for next word
+          // Auto-scroll to next word and focus input
           nextTick(() => {
+            scrollToCurrentWord()
             if (reviewInput.value) {
               reviewInput.value.focus()
             }
