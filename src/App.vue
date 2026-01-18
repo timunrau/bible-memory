@@ -71,24 +71,27 @@
         <div class="flex items-center gap-2 mb-4">
           <div
             v-for="(stage, index) in [
-              { name: 'Learn', status: 'unmemorized' },
-              { name: 'Memorize', status: 'learned' },
-              { name: 'Master', status: 'memorized' }
+              { name: 'Learn', status: 'unmemorized', mode: 'learn' },
+              { name: 'Memorize', status: 'learned', mode: 'memorize' },
+              { name: 'Master', status: 'memorized', mode: 'master' }
             ]"
             :key="index"
             class="flex items-center"
           >
             <div
+              @click="switchToMemorizationMode(stage.mode)"
               :class="[
-                'px-4 py-2 rounded-lg font-semibold',
-                getMemorizationStatus(memorizingVerse) === stage.status
-                  ? 'bg-blue-600 text-white'
+                'px-4 py-2 rounded-lg font-semibold transition-colors duration-200',
+                memorizationMode === stage.mode
+                  ? 'bg-blue-600 text-white cursor-pointer hover:bg-blue-700'
                   : getMemorizationStatus(memorizingVerse) === 'mastered' || 
                     (stage.status === 'unmemorized' && getMemorizationStatus(memorizingVerse) === 'learned') ||
                     (stage.status === 'learned' && getMemorizationStatus(memorizingVerse) === 'memorized') ||
                     (stage.status === 'memorized' && getMemorizationStatus(memorizingVerse) === 'mastered')
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-gray-200 text-gray-600'
+                  ? 'bg-green-100 text-green-800 cursor-pointer hover:bg-green-200'
+                  : canSwitchToMode(stage.mode)
+                  ? 'bg-gray-200 text-gray-600 cursor-pointer hover:bg-gray-300'
+                  : 'bg-gray-200 text-gray-400'
               ]"
             >
               {{ stage.name }}
@@ -2212,6 +2215,23 @@ export default {
       currentCollectionId.value = null
     }
 
+    // Check if we can switch to a given memorization mode
+    const canSwitchToMode = (targetMode) => {
+      if (!memorizingVerse.value || !memorizationMode.value) return false
+      
+      // Can switch to any mode when actively memorizing
+      // This allows free navigation between learn, memorize, and master modes
+      return true
+    }
+
+    // Switch to a different memorization mode
+    const switchToMemorizationMode = (mode) => {
+      if (!memorizingVerse.value) return
+      if (!canSwitchToMode(mode)) return
+      
+      startMemorization(memorizingVerse.value, mode)
+    }
+
     // Start memorizing a verse
     const startMemorization = (verse, mode) => {
       memorizingVerse.value = verse
@@ -2313,11 +2333,24 @@ export default {
         const currentStatus = verse.memorizationStatus || 'unmemorized'
         let newStatus = currentStatus
         
-        // Progress through memorization stages
-        if (memorizationMode.value === 'learn' && currentStatus === 'unmemorized') {
-          newStatus = 'learned'
-        } else if (memorizationMode.value === 'memorize' && currentStatus === 'learned') {
-          newStatus = 'memorized'
+        // Progress through memorization stages based on the mode just completed
+        // This allows skipping ahead - if you complete a mode, you advance to that stage
+        const statusOrder = { 'unmemorized': 0, 'learned': 1, 'memorized': 2, 'mastered': 3 }
+        const currentOrder = statusOrder[currentStatus] || 0
+        
+        if (memorizationMode.value === 'learn') {
+          // Completing learn mode sets status to at least 'learned'
+          if (currentOrder < 1) {
+            newStatus = 'learned'
+          }
+        } else if (memorizationMode.value === 'memorize') {
+          // Completing memorize mode sets status to at least 'memorized'
+          if (currentOrder < 2) {
+            newStatus = 'memorized'
+          }
+        } else if (memorizationMode.value === 'master') {
+          // Completing master mode sets status to 'mastered'
+          newStatus = 'mastered'
         }
         
         verse.memorizationStatus = newStatus
@@ -2852,6 +2885,8 @@ export default {
       getNextMemorizationMode,
       handleVerseClick,
       startMemorization,
+      canSwitchToMode,
+      switchToMemorizationMode,
       advanceToNextMode,
       exitMemorization,
       retryMemorization,
