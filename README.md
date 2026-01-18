@@ -51,6 +51,101 @@ npm run build
 npm run preview
 ```
 
+## Hosting with Docker Compose
+
+This app can be hosted using Docker Compose, which includes both the application and a WebDAV proxy server.
+
+### Prerequisites
+
+- Docker and Docker Compose installed on your server
+- A Nextcloud (or other WebDAV) server URL
+
+### Initial Setup
+
+1. **Clone the repository** (if you haven't already):
+   ```bash
+   git clone <repository-url>
+   cd bible-memory
+   ```
+
+2. **Configure the WebDAV proxy**:
+   Edit `docker-compose.yml` and update the `NEXTCLOUD_URL` environment variable in the `webdav-proxy` service:
+   ```yaml
+   environment:
+     - PROXY_PORT=3001
+     - NEXTCLOUD_URL="https://your-nextcloud.com/remote.php/dav/files/username"
+   ```
+
+3. **Build and start the services**:
+   ```bash
+   docker-compose up -d --build
+   ```
+
+4. **Verify the services are running**:
+   ```bash
+   docker-compose ps
+   ```
+
+The application will be available at `http://localhost:1234` (or your server's IP address).
+
+### Updating After Pulling New Code
+
+When you pull new code from git, you need to rebuild and restart the containers:
+
+1. **Pull the latest code**:
+   ```bash
+   git pull
+   ```
+
+2. **Rebuild and restart the containers**:
+   ```bash
+   docker-compose up -d --build
+   ```
+
+   This command will:
+   - Rebuild the Docker images with the new code
+   - Restart the containers with the updated images
+   - Run in detached mode (`-d`) so it continues running in the background
+
+3. **Verify the update**:
+   ```bash
+   docker-compose ps
+   docker-compose logs bible-memory
+   ```
+
+### Useful Docker Compose Commands
+
+- **View logs**:
+  ```bash
+  docker-compose logs -f bible-memory
+  docker-compose logs -f webdav-proxy
+  ```
+
+- **Stop the services**:
+  ```bash
+  docker-compose down
+  ```
+
+- **Restart without rebuilding**:
+  ```bash
+  docker-compose restart
+  ```
+
+- **View running containers**:
+  ```bash
+  docker-compose ps
+  ```
+
+### Troubleshooting
+
+- If the app doesn't load, check the logs: `docker-compose logs bible-memory`
+- If the WebDAV sync isn't working, check the proxy logs: `docker-compose logs webdav-proxy`
+- To completely reset (removes containers and volumes):
+  ```bash
+  docker-compose down -v
+  docker-compose up -d --build
+  ```
+
 ## Technologies
 
 - Vue.js 3
