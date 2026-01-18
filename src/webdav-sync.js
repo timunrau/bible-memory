@@ -75,9 +75,10 @@ function createWebDAVClient(settings) {
   console.log('[WebDAV] Original baseUrl:', baseUrl)
   
   if (shouldUseProxy) {
-    // In production, use the nginx proxy endpoint
+    // In production, use the nginx proxy endpoint (absolute URL needed for webdav library)
     if (isProduction()) {
-      proxyUrl = '/api/webdav'
+      // Use absolute URL so webdav library doesn't try to resolve relative paths
+      proxyUrl = window.location.origin + '/api/webdav'
     } else {
       // In development, use the explicit proxy URL or default
       proxyUrl = (settings.proxyUrl || 'http://localhost:3001').trim()

@@ -55,31 +55,41 @@ app.use((req, res, next) => {
     return res.status(400).json({ error: 'Invalid Nextcloud URL: ' + e.message })
   }
 
-  // The request path from the client (e.g., /remote.php/dav/files/timu/bible-memory-data.json)
-  // When using proxy, the client already includes the full Nextcloud path in the request
-  const requestPath = req.path === '/' ? '' : req.path
+  // The request path from the client includes /api/webdav prefix that nginx forwarded
+  // We need to strip that prefix and get the actual WebDAV path
+  let requestPath = req.path === '/' ? '' : req.path
   
-  // Normalize paths for comparison (remove trailing slashes)
-  const normalizedTargetPath = target.pathname.replace(/\/$/, '')
-  const normalizedRequestPath = requestPath.replace(/\/$/, '')
-  
-  // Determine the target path to forward to Nextcloud
-  let targetPath
-  if (normalizedRequestPath.startsWith(normalizedTargetPath)) {
-    // Request path already includes the full Nextcloud path, use it directly
-    targetPath = requestPath
-  } else if (requestPath === '' || requestPath === '/') {
-    // Root request, use target pathname
-    targetPath = target.pathname
-  } else {
-    // Request path is relative, combine with target pathname
-    targetPath = normalizedTargetPath + (requestPath.startsWith('/') ? '' : '/') + requestPath
+  // Strip /api/webdav prefix if present (nginx forwards the full path)
+  if (requestPath.startsWith('/api/webdav')) {
+    requestPath = requestPath.substring('/api/webdav'.length)
   }
+  
+  // If path is empty or root after stripping, use target pathname
+  if (!requestPath || requestPath === '/') {
+    requestPath = target.pathname
+  } else {
+    // Normalize paths for comparison (remove trailing slashes)
+    const normalizedTargetPath = target.pathname.replace(/\/$/, '')
+    const normalizedRequestPath = requestPath.replace(/\/$/, '')
+    
+    // Determine the target path to forward to Nextcloud
+    if (normalizedRequestPath.startsWith(normalizedTargetPath)) {
+      // Request path already includes the full Nextcloud path, use it directly
+      // (no change needed)
+    } else {
+      // Request path is relative, combine with target pathname
+      requestPath = normalizedTargetPath + (requestPath.startsWith('/') ? '' : '/') + requestPath
+    }
+  }
+  
+  const targetPath = requestPath
   
   // Debug logging
   console.log(`[Proxy] Target origin: ${target.origin}`)
   console.log(`[Proxy] Target pathname: ${target.pathname}`)
-  console.log(`[Proxy] Request path: ${requestPath}`)
+  console.log(`[Proxy] Original request path: ${req.path}`)
+  console.log(`[Proxy] Processed request path: ${requestPath}`)
+  console.log(`[Proxy] Final target path: ${targetPath}`)
   console.log(`[Proxy] Forwarding to: ${target.origin}${targetPath}`)
 
   // Create proxy middleware
