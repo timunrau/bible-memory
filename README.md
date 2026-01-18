@@ -6,7 +6,7 @@
 - [ ] Show a heatmap that shows a faint red background behind words that I have commonly missed. 
 - [ ] Vibrate if I get a word wrong
 - [ ] If I get a word wrong, still reveal the next word but make the text red
-- [ ] Minimum 80% accuracy in order to count as being reviewed. If I get less than 80% accuracy, change what the modal says, and make retry the primary call to action. 
+- [ ] Minimum 90% accuracy in order to count as being reviewed. If I get less than 80% accuracy, change what the modal says, and make retry the primary call to action. 
 - [ ] Show my accuracy and all that on the modal that popups up after reviewing the verse, instead of on the screen where I'm typing
 
 ### Other

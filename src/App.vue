@@ -415,12 +415,6 @@
               </button>
             </div>
           </div>
-          <p
-            @click="handleVerseClick(verse)"
-            class="text-gray-700 leading-relaxed mb-2 cursor-pointer"
-          >
-            {{ verse.content }}
-          </p>
           <div class="flex items-center justify-between">
             <div class="text-xs text-gray-500">
               <span v-if="verse.collectionIds && verse.collectionIds.length > 0">
@@ -759,28 +753,122 @@ export default {
       return verses.value.filter(v => isDueForReview(v)).length
     })
 
+    // Biblical book order for sorting
+    const bookOrder = {
+      // Old Testament
+      'genesis': 1, 'gen': 1,
+      'exodus': 2, 'ex': 2, 'exo': 2,
+      'leviticus': 3, 'lev': 3,
+      'numbers': 4, 'num': 4,
+      'deuteronomy': 5, 'deut': 5,
+      'joshua': 6, 'josh': 6,
+      'judges': 7, 'judg': 7,
+      'ruth': 8,
+      '1 samuel': 9, '1sam': 9, '1 sam': 9,
+      '2 samuel': 10, '2sam': 10, '2 sam': 10,
+      '1 kings': 11, '1kings': 11, '1 ki': 11,
+      '2 kings': 12, '2kings': 12, '2 ki': 12,
+      '1 chronicles': 13, '1chron': 13, '1 chron': 13,
+      '2 chronicles': 14, '2chron': 14, '2 chron': 14,
+      'ezra': 15,
+      'nehemiah': 16, 'neh': 16,
+      'esther': 17, 'est': 17,
+      'job': 18,
+      'psalms': 19, 'psalm': 19, 'ps': 19,
+      'proverbs': 20, 'prov': 20,
+      'ecclesiastes': 21, 'eccl': 21,
+      'song of solomon': 22, 'song': 22,
+      'isaiah': 23, 'isa': 23,
+      'jeremiah': 24, 'jer': 24,
+      'lamentations': 25, 'lam': 25,
+      'ezekiel': 26, 'ezek': 26,
+      'daniel': 27, 'dan': 27,
+      'hosea': 28, 'hos': 28,
+      'joel': 29,
+      'amos': 30,
+      'obadiah': 31, 'obad': 31,
+      'jonah': 32,
+      'micah': 33, 'mic': 33,
+      'nahum': 34, 'nah': 34,
+      'habakkuk': 35, 'hab': 35,
+      'zephaniah': 36, 'zeph': 36,
+      'haggai': 37, 'hag': 37,
+      'zechariah': 38, 'zech': 38,
+      'malachi': 39, 'mal': 39,
+      // New Testament
+      'matthew': 40, 'matt': 40, 'mat': 40, 'mt': 40,
+      'mark': 41, 'mk': 41,
+      'luke': 42, 'lk': 42,
+      'john': 43, 'jn': 43,
+      'acts': 44,
+      'romans': 45, 'rom': 45,
+      '1 corinthians': 46, '1cor': 46, '1 cor': 46,
+      '2 corinthians': 47, '2cor': 47, '2 cor': 47,
+      'galatians': 48, 'gal': 48,
+      'ephesians': 49, 'eph': 49,
+      'philippians': 50, 'phil': 50,
+      'colossians': 51, 'col': 51,
+      '1 thessalonians': 52, '1thess': 52, '1 thess': 52,
+      '2 thessalonians': 53, '2thess': 53, '2 thess': 53,
+      '1 timothy': 54, '1tim': 54, '1 tim': 54,
+      '2 timothy': 55, '2tim': 55, '2 tim': 55,
+      'titus': 56,
+      'philemon': 57, 'phlm': 57,
+      'hebrews': 58, 'heb': 58,
+      'james': 59, 'jas': 59,
+      '1 peter': 60, '1pet': 60, '1 pet': 60,
+      '2 peter': 61, '2pet': 61, '2 pet': 61,
+      '1 john': 62, '1jn': 62, '1 jn': 62,
+      '2 john': 63, '2jn': 63, '2 jn': 63,
+      '3 john': 64, '3jn': 64, '3 jn': 64,
+      'jude': 65,
+      'revelation': 66, 'rev': 66
+    }
+
+    // Parse verse reference into sortable components
+    const parseReference = (reference) => {
+      if (!reference) return { book: 999, chapter: 0, verse: 0 }
+      
+      // Match patterns like "Matthew 24:1" or "1 John 3:16" or "Psalm 119:105"
+      const match = reference.match(/^((?:\d\s)?[a-z]+)\s+(\d+):(\d+)/i)
+      
+      if (match) {
+        const bookName = match[1].toLowerCase().trim()
+        const chapter = parseInt(match[2], 10)
+        const verse = parseInt(match[3], 10)
+        const bookNum = bookOrder[bookName] || 999
+        
+        return { book: bookNum, chapter, verse }
+      }
+      
+      // If no match, return high numbers to sort to the end
+      return { book: 999, chapter: 0, verse: 0 }
+    }
+
     // Filtered verses for current view
     const filteredVerses = computed(() => {
       return getVersesForView()
     })
 
-    // Sort filtered verses
+    // Sort filtered verses by biblical reference
     const sortedVerses = computed(() => {
       const versesToSort = filteredVerses.value
       return [...versesToSort].sort((a, b) => {
-        const aDue = isDueForReview(a)
-        const bDue = isDueForReview(b)
+        const aParsed = parseReference(a.reference)
+        const bParsed = parseReference(b.reference)
         
-        // Due verses come first
-        if (aDue && !bDue) return -1
-        if (!aDue && bDue) return 1
+        // Sort by book
+        if (aParsed.book !== bParsed.book) {
+          return aParsed.book - bParsed.book
+        }
         
-        // If both due or both not due, sort by next review date
-        if (!a.nextReviewDate && !b.nextReviewDate) return 0
-        if (!a.nextReviewDate) return -1
-        if (!b.nextReviewDate) return 1
+        // Then by chapter
+        if (aParsed.chapter !== bParsed.chapter) {
+          return aParsed.chapter - bParsed.chapter
+        }
         
-        return new Date(a.nextReviewDate) - new Date(b.nextReviewDate)
+        // Then by verse
+        return aParsed.verse - bParsed.verse
       })
     })
 
@@ -1459,6 +1547,7 @@ export default {
 
     // Load verses on mount
     onMounted(() => {
+      loadCollections()
       loadVerses()
     })
 
