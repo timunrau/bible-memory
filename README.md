@@ -1,7 +1,15 @@
 # Bible Memory PWA
 
 ## Wishlist
+### Verse Review
 - [ ] Fuzzy typing: typing a letter near the correct letter should count as correct (for mobile use)
+- [ ] Show a heatmap that shows a faint red background behind words that I have commonly missed. 
+- [ ] Vibrate if I get a word wrong
+- [ ] If I get a word wrong, still reveal the next word but make the text red
+- [ ] Minimum 80% accuracy in order to count as being reviewed. If I get less than 80% accuracy, change what the modal says, and make retry the primary call to action. 
+- [ ] Show my accuracy and all that on the modal that popups up after reviewing the verse, instead of on the screen where I'm typing
+
+### Other
 - [ ] backup and import
 - [ ] Two way sync with a webdav folder. Sync on every change of anything. When I connect a blank copy of the app to a webdav folder that already has bible memory data in it, import everything.
 - [ ] Set bible version on the verse
