@@ -1062,6 +1062,55 @@ export default {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(verses.value))
     }
 
+    // Get adjacent keys on QWERTY keyboard for fuzzy typing
+    const getAdjacentKeys = (letter) => {
+      const qwertyLayout = {
+        // Row 1
+        'q': ['w', 'a'],
+        'w': ['q', 'e', 'a', 's'],
+        'e': ['w', 'r', 's', 'd'],
+        'r': ['e', 't', 'd', 'f'],
+        't': ['r', 'y', 'f', 'g'],
+        'y': ['t', 'u', 'g', 'h'],
+        'u': ['y', 'i', 'h', 'j'],
+        'i': ['u', 'o', 'j', 'k'],
+        'o': ['i', 'p', 'k', 'l'],
+        'p': ['o', 'l'],
+        // Row 2
+        'a': ['q', 'w', 's', 'z'],
+        's': ['a', 'w', 'e', 'd', 'x', 'z'],
+        'd': ['s', 'e', 'r', 'f', 'c', 'x'],
+        'f': ['d', 'r', 't', 'g', 'v', 'c'],
+        'g': ['f', 't', 'y', 'h', 'b', 'v'],
+        'h': ['g', 'y', 'u', 'j', 'n', 'b'],
+        'j': ['h', 'u', 'i', 'k', 'm', 'n'],
+        'k': ['j', 'i', 'o', 'l', 'm'],
+        'l': ['k', 'o', 'p'],
+        // Row 3
+        'z': ['a', 's', 'x'],
+        'x': ['z', 's', 'd', 'c'],
+        'c': ['x', 'd', 'f', 'v'],
+        'v': ['c', 'f', 'g', 'b'],
+        'b': ['v', 'g', 'h', 'n'],
+        'n': ['b', 'h', 'j', 'm'],
+        'm': ['n', 'j', 'k']
+      }
+      return qwertyLayout[letter.toLowerCase()] || []
+    }
+
+    // Check if typed letter is correct or adjacent (fuzzy typing)
+    const isLetterMatch = (typedLetter, correctLetter) => {
+      const typed = typedLetter.toLowerCase()
+      const correct = correctLetter.toLowerCase()
+      
+      // Exact match
+      if (typed === correct) return true
+      
+      // Check if typed letter is adjacent to correct letter
+      const adjacentKeys = getAdjacentKeys(correct)
+      return adjacentKeys.includes(typed)
+    }
+
     // Calculate grade (0-5) based on accuracy
     // Grade 5 = perfect, 4 = excellent, 3 = good, 2 = hard, 1 = again, 0 = complete failure
     const calculateGrade = (totalWords, mistakes) => {
@@ -1705,9 +1754,9 @@ export default {
       if (nextWordIndex !== -1) {
         const nextWord = reviewWords.value[nextWordIndex]
         
-        // Check if the letter matches the first letter of the next word
-        if (letter === nextWord.firstLetter) {
-          // Correct letter - reveal the word normally
+        // Check if the letter matches the first letter of the next word (with fuzzy typing)
+        if (isLetterMatch(letter, nextWord.firstLetter)) {
+          // Correct letter (exact or adjacent) - reveal the word normally
           nextWord.revealed = true
           nextWord.incorrect = false
           if (memorizationMode.value === 'learn' || memorizationMode.value === 'memorize') {
@@ -1722,7 +1771,7 @@ export default {
             }
           })
         } else {
-          // Wrong letter - reveal the word but mark it as incorrect
+          // Wrong letter (not correct and not adjacent) - reveal the word but mark it as incorrect
           nextWord.revealed = true
           nextWord.incorrect = true
           if (memorizationMode.value === 'learn' || memorizationMode.value === 'memorize') {
