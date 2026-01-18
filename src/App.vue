@@ -152,27 +152,46 @@
         class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
       >
         <div class="bg-white rounded-3xl shadow-xl max-w-md w-full p-6">
-          <p class="text-2xl font-bold text-green-800 mb-2 text-center">🎉 Great job!</p>
-          <p class="text-green-700 text-center mb-6">
-            <span v-if="memorizationMode === 'learn'">You've learned this verse! Ready to memorize it?</span>
-            <span v-else-if="memorizationMode === 'memorize'">You've memorized this verse! Ready to master it?</span>
-            <span v-else-if="memorizationMode === 'master'">You've mastered this verse! It's now in your spaced repetition system.</span>
-          </p>
-          <div class="flex justify-center">
-            <button
-              v-if="memorizationMode !== 'master'"
-              @click="advanceToNextMode"
-              class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors duration-200"
-            >
-              Continue to {{ memorizationMode === 'learn' ? 'Memorize' : 'Master' }}
-            </button>
-            <button
-              v-else
-              @click="exitMemorization"
-              class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors duration-200"
-            >
-              Done
-            </button>
+          <div v-if="meetsAccuracyRequirement">
+            <p class="text-2xl font-bold text-green-800 mb-2 text-center">🎉 Great job!</p>
+            <p class="text-green-700 text-center mb-6">
+              <span v-if="memorizationMode === 'learn'">You've learned this verse! Ready to memorize it?</span>
+              <span v-else-if="memorizationMode === 'memorize'">You've memorized this verse! Ready to master it?</span>
+              <span v-else-if="memorizationMode === 'master'">You've mastered this verse! It's now in your spaced repetition system.</span>
+            </p>
+            <div class="flex justify-center">
+              <button
+                v-if="memorizationMode !== 'master'"
+                @click="advanceToNextMode"
+                class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors duration-200"
+              >
+                Continue to {{ memorizationMode === 'learn' ? 'Memorize' : 'Master' }}
+              </button>
+              <button
+                v-else
+                @click="exitMemorization"
+                class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors duration-200"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+          <div v-else>
+            <p class="text-2xl font-bold text-orange-800 mb-2 text-center">Keep practicing!</p>
+            <p class="text-orange-700 text-center mb-2">
+              Your accuracy is {{ accuracy.toFixed(1) }}%. You need 90% accuracy to advance.
+            </p>
+            <p class="text-sm text-gray-600 text-center mb-6">
+              Mistakes: {{ reviewMistakes }} / {{ reviewWords.length }} words
+            </p>
+            <div class="flex justify-center">
+              <button
+                @click="retryMemorization"
+                class="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold transition-colors duration-200"
+              >
+                Try Again
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -269,21 +288,40 @@
         class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
       >
         <div class="bg-white rounded-3xl shadow-xl max-w-md w-full p-6">
-          <p class="text-2xl font-bold text-green-800 mb-2 text-center">🎉 Great job!</p>
-          <p class="text-green-700 text-center mb-6">You've revealed all the words in this verse.</p>
-          <div class="flex justify-center gap-3">
-            <button
-              @click="retryReview"
-              class="px-6 py-2.5 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-semibold transition-colors duration-200"
-            >
-              Retry
-            </button>
-            <button
-              @click="nextVerse"
-              class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors duration-200"
-            >
-              Next Verse
-            </button>
+          <div v-if="meetsAccuracyRequirement">
+            <p class="text-2xl font-bold text-green-800 mb-2 text-center">🎉 Great job!</p>
+            <p class="text-green-700 text-center mb-6">You've reviewed this verse with {{ accuracy.toFixed(1) }}% accuracy!</p>
+            <div class="flex justify-center gap-3">
+              <button
+                @click="retryReview"
+                class="px-6 py-2.5 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-semibold transition-colors duration-200"
+              >
+                Retry
+              </button>
+              <button
+                @click="nextVerse"
+                class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors duration-200"
+              >
+                Next Verse
+              </button>
+            </div>
+          </div>
+          <div v-else>
+            <p class="text-2xl font-bold text-orange-800 mb-2 text-center">Keep practicing!</p>
+            <p class="text-orange-700 text-center mb-2">
+              Your accuracy is {{ accuracy.toFixed(1) }}%. You need 90% accuracy to count this as reviewed.
+            </p>
+            <p class="text-sm text-gray-600 text-center mb-6">
+              Mistakes: {{ reviewMistakes }} / {{ reviewWords.length }} words
+            </p>
+            <div class="flex justify-center">
+              <button
+                @click="retryReview"
+                class="px-6 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-semibold transition-colors duration-200"
+              >
+                Try Again
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -828,6 +866,17 @@ export default {
         // In learn, master, or review mode, all words should be revealed
         return reviewWords.value.every(w => w.revealed)
       }
+    })
+
+    // Calculate accuracy percentage
+    const accuracy = computed(() => {
+      if (reviewWords.value.length === 0) return 0
+      return ((reviewWords.value.length - reviewMistakes.value) / reviewWords.value.length) * 100
+    })
+
+    // Check if accuracy meets the 90% requirement
+    const meetsAccuracyRequirement = computed(() => {
+      return accuracy.value >= 90
     })
 
     // Count verses due for review
@@ -1444,6 +1493,9 @@ export default {
     const advanceToNextMode = () => {
       if (!memorizingVerse.value || !allWordsRevealed.value) return
       
+      // Require 90% accuracy to advance
+      if (!meetsAccuracyRequirement.value) return
+      
       const verse = verses.value.find(v => v.id === memorizingVerse.value.id)
       if (verse) {
         const currentStatus = verse.memorizationStatus || 'unmemorized'
@@ -1472,8 +1524,8 @@ export default {
 
     // Exit memorization mode
     const exitMemorization = () => {
-      // Update memorization status if all words were revealed
-      if (memorizingVerse.value && allWordsRevealed.value) {
+      // Update memorization status if all words were revealed and accuracy requirement is met
+      if (memorizingVerse.value && allWordsRevealed.value && meetsAccuracyRequirement.value) {
         const verse = verses.value.find(v => v.id === memorizingVerse.value.id)
         if (verse) {
           const currentStatus = verse.memorizationStatus || 'unmemorized'
@@ -1495,6 +1547,15 @@ export default {
       reviewMistakes.value = 0
     }
 
+    // Retry memorization (reset without saving)
+    const retryMemorization = () => {
+      if (memorizingVerse.value) {
+        const verse = memorizingVerse.value
+        const currentMode = memorizationMode.value
+        startMemorization(verse, currentMode)
+      }
+    }
+
     // Retry current review
     const retryReview = () => {
       if (reviewingVerse.value) {
@@ -1507,9 +1568,9 @@ export default {
     // Move to next verse for review
     const nextVerse = () => {
       if (reviewingVerse.value) {
-        // Save current review first
+        // Save current review first (only if accuracy requirement is met)
         const verse = verses.value.find(v => v.id === reviewingVerse.value.id)
-        if (verse && allWordsRevealed.value) {
+        if (verse && allWordsRevealed.value && meetsAccuracyRequirement.value) {
           const totalWords = reviewWords.value.length
           const grade = calculateGrade(totalWords, reviewMistakes.value)
           
@@ -1552,8 +1613,8 @@ export default {
 
     // Exit review mode
     const exitReview = () => {
-      // Mark verse as reviewed if all words were revealed
-      if (reviewingVerse.value && allWordsRevealed.value) {
+      // Mark verse as reviewed if all words were revealed and accuracy requirement is met
+      if (reviewingVerse.value && allWordsRevealed.value && meetsAccuracyRequirement.value) {
         const verse = verses.value.find(v => v.id === reviewingVerse.value.id)
         if (verse) {
           const totalWords = reviewWords.value.length
@@ -1697,6 +1758,7 @@ export default {
       startMemorization,
       advanceToNextMode,
       exitMemorization,
+      retryMemorization,
       startReview,
       retryReview,
       nextVerse,
@@ -1704,6 +1766,8 @@ export default {
       focusInput,
       handleKeyPress,
       checkLetter,
+      accuracy,
+      meetsAccuracyRequirement,
       collections,
       currentCollectionId,
       showCollectionForm,
