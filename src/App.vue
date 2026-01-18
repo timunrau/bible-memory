@@ -342,9 +342,20 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 class="text-xl font-semibold text-gray-900 flex-1 text-center" :class="{ 'mr-11': currentCollectionId }">
+        <h1 class="text-xl font-semibold text-gray-900 flex-1 text-center" :class="{ 'mr-11': currentCollectionId || !currentCollectionId }">
           {{ currentCollectionId ? getCollectionName(currentCollectionId) : 'Collections' }}
         </h1>
+        <button
+          v-if="!currentCollectionId"
+          @click="showSettings = true"
+          class="p-2 -mr-2 ml-1 text-gray-700 active:bg-gray-100 rounded-full transition-colors"
+          title="Settings"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </button>
       </div>
     </header>
 
@@ -813,10 +824,158 @@
           </form>
         </div>
       </div>
+
+      <!-- Settings Modal -->
+      <div
+        v-if="showSettings"
+        class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+        @click.self="closeSettings"
+      >
+        <div class="bg-white rounded-3xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+          <h2 class="text-2xl font-bold text-gray-900 mb-6">WebDAV Sync Settings</h2>
+          
+          <form @submit.prevent="saveWebDAVSettingsForm" class="space-y-4">
+            <div>
+              <label for="webdav-url" class="block text-sm font-medium text-gray-700 mb-2">
+                WebDAV Server URL
+              </label>
+              <input
+                id="webdav-url"
+                v-model="webdavSettings.url"
+                type="url"
+                placeholder="https://example.com/webdav"
+                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+              <p class="text-xs text-gray-500 mt-1">Full URL to your WebDAV server</p>
+            </div>
+
+            <div>
+              <label for="webdav-folder" class="block text-sm font-medium text-gray-700 mb-2">
+                Folder Path (optional)
+              </label>
+              <input
+                id="webdav-folder"
+                v-model="webdavSettings.folder"
+                type="text"
+                placeholder="bible-memory"
+                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+              <p class="text-xs text-gray-500 mt-1">Subfolder path on your WebDAV server (leave empty for root)</p>
+            </div>
+
+            <div>
+              <label for="webdav-username" class="block text-sm font-medium text-gray-700 mb-2">
+                Username
+              </label>
+              <input
+                id="webdav-username"
+                v-model="webdavSettings.username"
+                type="text"
+                placeholder="your-username"
+                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+            </div>
+
+            <div>
+              <label for="webdav-password" class="block text-sm font-medium text-gray-700 mb-2">
+                Password
+              </label>
+              <input
+                id="webdav-password"
+                v-model="webdavSettings.password"
+                type="password"
+                placeholder="your-password"
+                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+            </div>
+
+            <div class="border-t border-gray-200 pt-4 mt-4">
+              <div class="flex items-center space-x-2 mb-4">
+                <input
+                  id="use-proxy"
+                  v-model="webdavSettings.useProxy"
+                  type="checkbox"
+                  class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <label for="use-proxy" class="text-sm font-medium text-gray-700">
+                  Use CORS Proxy (for development with Nextcloud)
+                </label>
+              </div>
+              
+              <div v-if="webdavSettings.useProxy" class="ml-6 space-y-3">
+                <div>
+                  <label for="proxy-url" class="block text-sm font-medium text-gray-700 mb-2">
+                    Proxy Server URL
+                  </label>
+                  <input
+                    id="proxy-url"
+                    v-model="webdavSettings.proxyUrl"
+                    type="url"
+                    placeholder="http://localhost:3001"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  />
+                  <p class="text-xs text-gray-500 mt-1">URL of the CORS proxy server (default: http://localhost:3001)</p>
+                </div>
+                
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <p class="text-xs text-yellow-800">
+                    <strong>Setup:</strong> Run the proxy server with:<br/>
+                    <code class="bg-yellow-100 px-2 py-1 rounded">NEXTCLOUD_URL={{ webdavSettings.url || 'YOUR_NEXTCLOUD_URL' }} npm run dev:proxy</code><br/>
+                    Or use <code class="bg-yellow-100 px-2 py-1 rounded">npm run dev:all</code> to run both the app and proxy together.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="syncStatus" class="p-3 rounded-lg" :class="syncStatus.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'">
+              <p class="text-sm whitespace-pre-line">{{ syncStatus.message }}</p>
+            </div>
+
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+              <p class="text-sm text-blue-800">
+                <strong>Note:</strong> If you see a "CORS Error", enable the CORS proxy option above and run the proxy server. 
+                This is needed for Nextcloud and other servers that don't allow direct browser access.
+              </p>
+            </div>
+
+            <div class="flex justify-between items-center pt-4">
+              <button
+                type="button"
+                @click="testWebDAVConnection"
+                :disabled="testingConnection"
+                class="px-6 py-2.5 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {{ testingConnection ? 'Testing...' : 'Test Connection' }}
+              </button>
+              <div class="flex gap-3">
+                <button
+                  type="button"
+                  @click="closeSettings"
+                  class="px-6 py-2.5 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors duration-200 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors duration-200"
+                >
+                  Save Settings
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
 </template>
 
 <script>
 import { ref, onMounted, computed, nextTick } from 'vue'
+import { 
+  getWebDAVSettings, 
+  saveWebDAVSettings, 
+  syncData, 
+  testWebDAVConnection as testConnection 
+} from './webdav-sync.js'
 
 export default {
   name: 'App',
@@ -826,6 +985,7 @@ export default {
     const showForm = ref(false)
     const showCollectionForm = ref(false)
     const showEditVerseForm = ref(false)
+    const showSettings = ref(false)
     const editingVerse = ref(null)
     const currentCollectionId = ref(null) // null = all verses, string = specific collection
     const reviewingVerse = ref(null)
@@ -837,6 +997,9 @@ export default {
     const reviewTextContainer = ref(null)
     const memorizationScrollContainer = ref(null)
     const reviewMistakes = ref(0) // Track mistakes during review
+    const testingConnection = ref(false)
+    const syncStatus = ref(null)
+    const syncing = ref(false)
 
     const newVerse = ref({
       reference: '',
@@ -848,6 +1011,16 @@ export default {
     const newCollection = ref({
       name: '',
       description: ''
+    })
+
+    // WebDAV settings
+    const webdavSettings = ref({
+      url: '',
+      folder: '',
+      username: '',
+      password: '',
+      useProxy: false,
+      proxyUrl: 'http://localhost:3001'
     })
 
     const STORAGE_KEY = 'bible-memory-verses'
@@ -1016,6 +1189,8 @@ export default {
     // Save collections to local storage
     const saveCollections = () => {
       localStorage.setItem(COLLECTIONS_KEY, JSON.stringify(collections.value))
+      // Trigger sync after save
+      triggerSync()
     }
 
     // Load verses from local storage
@@ -1062,6 +1237,8 @@ export default {
     // Save verses to local storage
     const saveVerses = () => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(verses.value))
+      // Trigger sync after save
+      triggerSync()
     }
 
     // Get adjacent keys on QWERTY keyboard for fuzzy typing
@@ -1881,10 +2058,164 @@ export default {
       }
     }
 
+    // WebDAV sync functions
+    const triggerSync = async () => {
+      // Don't sync if already syncing or if WebDAV not configured
+      if (syncing.value) return
+      
+      const settings = getWebDAVSettings()
+      if (!settings || !settings.url || !settings.username || !settings.password) {
+        return
+      }
+      
+      syncing.value = true
+      try {
+        const result = await syncData(verses.value, collections.value)
+        if (result.success) {
+          // Update local data with merged data from sync
+          if (result.verses) {
+            verses.value = result.verses
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(verses.value))
+          }
+          if (result.collections) {
+            collections.value = result.collections
+            localStorage.setItem(COLLECTIONS_KEY, JSON.stringify(collections.value))
+          }
+        } else {
+          // Sync failed, but don't show error to user for background syncs
+          console.warn('Background sync failed:', result.error)
+        }
+      } catch (error) {
+        // Sync failed, but don't break the app
+        console.error('Sync error:', error)
+      } finally {
+        syncing.value = false
+      }
+    }
+
+    // Load WebDAV settings
+    const loadWebDAVSettings = () => {
+      const settings = getWebDAVSettings()
+      if (settings) {
+        webdavSettings.value = {
+          url: settings.url || '',
+          folder: settings.folder || '',
+          username: settings.username || '',
+          password: settings.password || '', // Load password from storage
+          useProxy: settings.useProxy || false,
+          proxyUrl: settings.proxyUrl || 'http://localhost:3001'
+        }
+      } else {
+        // Initialize with defaults if no settings exist
+        webdavSettings.value = {
+          url: '',
+          folder: '',
+          username: '',
+          password: '',
+          useProxy: false,
+          proxyUrl: 'http://localhost:3001'
+        }
+      }
+    }
+
+    // Save WebDAV settings
+    const saveWebDAVSettingsForm = async () => {
+      if (!webdavSettings.value.url || !webdavSettings.value.username || !webdavSettings.value.password) {
+        syncStatus.value = {
+          type: 'error',
+          message: 'Please fill in all required fields (URL, Username, Password)'
+        }
+        return
+      }
+
+      // Create a clean settings object with all fields
+      const settingsToSave = {
+        url: webdavSettings.value.url.trim(),
+        folder: (webdavSettings.value.folder || '').trim(),
+        username: webdavSettings.value.username.trim(),
+        password: webdavSettings.value.password, // Keep password as-is
+        useProxy: webdavSettings.value.useProxy || false,
+        proxyUrl: (webdavSettings.value.proxyUrl || 'http://localhost:3001').trim()
+      }
+
+      // Save to localStorage
+      saveWebDAVSettings(settingsToSave)
+      
+      // Update the reactive object to match what was saved
+      webdavSettings.value = { ...settingsToSave }
+      
+      syncStatus.value = {
+        type: 'success',
+        message: 'Settings saved successfully!'
+      }
+
+      // Trigger initial sync after saving settings
+      setTimeout(() => {
+        triggerSync()
+      }, 500)
+    }
+
+    // Test WebDAV connection
+    const testWebDAVConnection = async () => {
+      if (!webdavSettings.value.url || !webdavSettings.value.username || !webdavSettings.value.password) {
+        syncStatus.value = {
+          type: 'error',
+          message: 'Please fill in all required fields first'
+        }
+        return
+      }
+
+      testingConnection.value = true
+      syncStatus.value = null
+
+      try {
+        const result = await testConnection(webdavSettings.value)
+        if (result.success) {
+          syncStatus.value = {
+            type: 'success',
+            message: 'Connection successful!'
+          }
+        } else {
+          syncStatus.value = {
+            type: 'error',
+            message: `Connection failed: ${result.error || 'Unknown error'}`
+          }
+        }
+      } catch (error) {
+        syncStatus.value = {
+          type: 'error',
+          message: `Connection failed: ${error.message || 'Unknown error'}`
+        }
+      } finally {
+        testingConnection.value = false
+      }
+    }
+
+    // Close settings modal
+    const closeSettings = () => {
+      showSettings.value = false
+      syncStatus.value = null
+      // Reload settings to show saved values (but don't reset password if user is editing)
+      const saved = getWebDAVSettings()
+      if (saved) {
+        // Keep current password if user was editing (don't clear it)
+        const currentPassword = webdavSettings.value.password
+        loadWebDAVSettings()
+        // If user had entered a password, keep it (they might want to save it)
+        if (currentPassword && !saved.password) {
+          webdavSettings.value.password = currentPassword
+        }
+      }
+    }
+
     // Load verses on mount
-    onMounted(() => {
+    onMounted(async () => {
       loadCollections()
       loadVerses()
+      loadWebDAVSettings()
+      
+      // Perform initial sync on app load
+      await triggerSync()
     })
 
     return {
@@ -1940,7 +2271,14 @@ export default {
       startEditVerse,
       saveEditedVerse,
       closeEditVerseForm,
-      deleteVerse
+      deleteVerse,
+      showSettings,
+      webdavSettings,
+      saveWebDAVSettingsForm,
+      testWebDAVConnection,
+      closeSettings,
+      testingConnection,
+      syncStatus
     }
   }
 }
