@@ -150,20 +150,11 @@ function createWebDAVClient(settings) {
 
 /**
  * Get full file path for sync file
+ * Note: The folder is already included in the client's baseUrl, so we just return the filename
  */
 function getSyncFilePath(settings) {
-  let url = settings.url.trim()
-  if (!url.endsWith('/')) {
-    url += '/'
-  }
-  
-  if (settings.folder && settings.folder.trim()) {
-    const folder = settings.folder.trim().replace(/^\//, '').replace(/\/$/, '')
-    if (folder) {
-      return folder + '/' + SYNC_FILENAME
-    }
-  }
-  
+  // The folder is already included in the baseUrl when creating the client,
+  // so we just need to return the filename
   return SYNC_FILENAME
 }
 
