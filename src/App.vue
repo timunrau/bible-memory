@@ -294,7 +294,7 @@
               @click.stop="viewAllVerses"
               class="text-gray-600 hover:text-gray-900"
             >
-              ← All Verses
+              ← Collections
             </button>
           </div>
         </div>
@@ -326,7 +326,41 @@
           </button>
         </div>
         
-        <div v-if="collections.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        <div class="space-y-4 mb-8">
+          <!-- Master List Collection -->
+          <div
+            @click="viewCollection('master-list')"
+            class="bg-white rounded-lg shadow-md p-6 cursor-pointer hover:shadow-lg transition-shadow duration-200 border-l-4 border-blue-500"
+          >
+            <div class="flex items-start justify-between mb-2">
+              <h3 class="text-xl font-semibold text-gray-800 flex-1">Master List</h3>
+            </div>
+            <p class="text-gray-600 text-sm mb-3">All your verses in one place</p>
+            <div class="flex items-center justify-between">
+              <div class="text-xs text-gray-500">
+                {{ verses.length }} verse{{ verses.length !== 1 ? 's' : '' }}
+                <span v-if="dueVersesCount > 0" class="ml-2">
+                  • {{ dueVersesCount }} due for review
+                </span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span
+                  v-if="dueVersesCount > 0"
+                  class="px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full"
+                >
+                  {{ dueVersesCount }} Due
+                </span>
+                <span
+                  v-else-if="verses.length > 0"
+                  class="px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full"
+                >
+                  All caught up
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- User Collections -->
           <div
             v-for="collection in collections"
             :key="collection.id"
@@ -334,51 +368,64 @@
             class="bg-white rounded-lg shadow-md p-6 cursor-pointer hover:shadow-lg transition-shadow duration-200 border-l-4 border-green-500"
           >
             <div class="flex items-start justify-between mb-2">
-              <h3 class="text-xl font-semibold text-gray-800">{{ collection.name }}</h3>
+              <h3 class="text-xl font-semibold text-gray-800 flex-1">{{ collection.name }}</h3>
               <button
                 @click.stop="deleteCollection(collection.id)"
-                class="text-red-600 hover:text-red-800 text-sm"
+                class="text-red-600 hover:text-red-800 text-sm px-2 py-1"
                 title="Delete collection"
               >
                 ×
               </button>
             </div>
-            <p v-if="collection.description" class="text-gray-600 text-sm mb-2">{{ collection.description }}</p>
-            <p class="text-xs text-gray-500">
-              {{ verses.filter(v => v.collectionIds && v.collectionIds.includes(collection.id)).length }} verse{{ verses.filter(v => v.collectionIds && v.collectionIds.includes(collection.id)).length !== 1 ? 's' : '' }}
-            </p>
+            <p v-if="collection.description" class="text-gray-600 text-sm mb-3">{{ collection.description }}</p>
+            <div class="flex items-center justify-between">
+              <div class="text-xs text-gray-500">
+                {{ getCollectionVerseCount(collection.id) }} verse{{ getCollectionVerseCount(collection.id) !== 1 ? 's' : '' }}
+                <span v-if="getCollectionDueCount(collection.id) > 0" class="ml-2">
+                  • {{ getCollectionDueCount(collection.id) }} due for review
+                </span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span
+                  v-if="getCollectionDueCount(collection.id) > 0"
+                  class="px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full"
+                >
+                  {{ getCollectionDueCount(collection.id) }} Due
+                </span>
+                <span
+                  v-else-if="getCollectionVerseCount(collection.id) > 0"
+                  class="px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full"
+                >
+                  All caught up
+                </span>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div v-else class="bg-white rounded-lg shadow-md p-12 text-center mb-8">
-          <p class="text-gray-500 text-lg mb-4">No collections yet. Create one to organize your verses!</p>
-          <button
-            @click="showCollectionForm = true"
-            class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition-colors duration-200"
-          >
-            + Create First Collection
-          </button>
+          <!-- Empty state when no verses exist -->
+          <div v-if="verses.length === 0 && collections.length === 0" class="bg-white rounded-lg shadow-md p-12 text-center">
+            <p class="text-gray-500 text-lg mb-4">No verses yet. Add your first verse to get started!</p>
+          </div>
         </div>
       </div>
 
       <!-- Collection View -->
-      <div v-if="currentCollectionId" class="mb-6">
+      <div v-if="currentCollectionId">
         <h2 class="text-2xl font-bold text-gray-900 mb-4">
           {{ getCollectionName(currentCollectionId) }}
         </h2>
-      </div>
 
-      <div class="mb-6 flex gap-2">
-        <button
-          @click="showForm = true"
-          class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition-colors duration-200"
-        >
-          + Add New Verse
-        </button>
-      </div>
+        <div class="mb-6 flex gap-2">
+          <button
+            @click="showForm = true"
+            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition-colors duration-200"
+          >
+            + Add New Verse
+          </button>
+        </div>
 
-      <!-- Verse List -->
-      <div v-if="currentCollectionId || sortedVerses.length > 0" class="space-y-4">
+        <!-- Verse List -->
+        <div class="space-y-4">
         <div
           v-for="verse in sortedVerses"
           :key="verse.id"
@@ -473,10 +520,11 @@
             </span>
           </div>
         </div>
-      </div>
 
-      <div v-else class="bg-white rounded-lg shadow-md p-12 text-center">
-        <p class="text-gray-500 text-lg">No verses yet. Add your first verse to get started!</p>
+          <div v-if="sortedVerses.length === 0" class="bg-white rounded-lg shadow-md p-12 text-center">
+            <p class="text-gray-500 text-lg">No verses in this collection yet.</p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1175,15 +1223,36 @@ export default {
     // Get verses for current view (all or filtered by collection)
     const getVersesForView = () => {
       if (currentCollectionId.value) {
+        // Handle special "master-list" collection
+        if (currentCollectionId.value === 'master-list') {
+          return verses.value
+        }
         return verses.value.filter(v => v.collectionIds && v.collectionIds.includes(currentCollectionId.value))
       }
-      return verses.value
+      return []
     }
 
     // Get collection name by ID
     const getCollectionName = (collectionId) => {
+      if (collectionId === 'master-list') {
+        return 'Master List'
+      }
       const collection = collections.value.find(c => c.id === collectionId)
       return collection ? collection.name : 'Unknown'
+    }
+
+    // Get verse count for a collection
+    const getCollectionVerseCount = (collectionId) => {
+      return verses.value.filter(v => v.collectionIds && v.collectionIds.includes(collectionId)).length
+    }
+
+    // Get count of verses due for review in a collection
+    const getCollectionDueCount = (collectionId) => {
+      return verses.value.filter(v => 
+        v.collectionIds && 
+        v.collectionIds.includes(collectionId) && 
+        isDueForReview(v)
+      ).length
     }
 
     // Edit verse
@@ -1594,6 +1663,8 @@ export default {
       closeCollectionForm,
       deleteCollection,
       getCollectionName,
+      getCollectionVerseCount,
+      getCollectionDueCount,
       viewCollection,
       viewAllVerses,
       startEditVerse,
