@@ -1,5 +1,12 @@
 # Bible Memory PWA
 
+## Wishlist
+- [ ] Fuzzy typing: typing a letter near the correct letter should count as correct (for mobile use)
+- [ ] Two way sync with a webdav folder. Sync on every chagne of anything. 
+- [ ] Set bible version on the verse
+- [ ] Installable PWA
+
+
 A Progressive Web App for memorizing Bible verses, built with Vue.js and Tailwind CSS.
 
 ## Features
