@@ -1286,7 +1286,7 @@ Romans 8:28,"And we know that in all things...",ESV</pre>
 </template>
 
 <script>
-import { ref, onMounted, computed, nextTick } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, nextTick } from 'vue'
 import { 
   getWebDAVSettings, 
   saveWebDAVSettings, 
@@ -1353,6 +1353,118 @@ export default {
 
     const STORAGE_KEY = 'bible-memory-verses'
     const COLLECTIONS_KEY = 'bible-memory-collections'
+
+    // Navigation state tracking for back button handling
+    let isHandlingBackButton = false
+    
+    // Get current navigation state
+    const getNavigationState = () => {
+      if (memorizingVerse.value) {
+        return {
+          view: 'memorization',
+          verseId: memorizingVerse.value.id,
+          mode: memorizationMode.value,
+          collectionId: currentCollectionId.value
+        }
+      } else if (reviewingVerse.value) {
+        return {
+          view: 'review',
+          verseId: reviewingVerse.value.id,
+          collectionId: currentCollectionId.value
+        }
+      } else if (currentCollectionId.value) {
+        return {
+          view: 'collection',
+          collectionId: currentCollectionId.value
+        }
+      } else {
+        return {
+          view: 'collections'
+        }
+      }
+    }
+
+    // Push history state when navigating
+    const pushNavigationState = (state) => {
+      if (isHandlingBackButton) return
+      
+      const url = new URL(window.location.href)
+      url.searchParams.set('view', state.view)
+      if (state.collectionId) {
+        url.searchParams.set('collection', state.collectionId)
+      }
+      if (state.verseId) {
+        url.searchParams.set('verse', state.verseId)
+      }
+      if (state.mode) {
+        url.searchParams.set('mode', state.mode)
+      }
+      
+      window.history.pushState(state, '', url)
+    }
+
+    // Restore app state from navigation state
+    const restoreNavigationState = (state) => {
+      isHandlingBackButton = true
+      
+      // Close any modals/forms first
+      showForm.value = false
+      showCollectionForm.value = false
+      showEditVerseForm.value = false
+      showSettings.value = false
+      showImportCSV.value = false
+      fabMenuOpen.value = false
+      
+      // Restore collection view
+      if (state.collectionId) {
+        currentCollectionId.value = state.collectionId
+      } else {
+        currentCollectionId.value = null
+      }
+      
+      // Restore memorization or review view
+      if (state.view === 'memorization' && state.verseId) {
+        const verse = verses.value.find(v => v.id === state.verseId)
+        if (verse && state.mode) {
+          startMemorization(verse, state.mode)
+        }
+      } else if (state.view === 'review' && state.verseId) {
+        const verse = verses.value.find(v => v.id === state.verseId)
+        if (verse) {
+          startReview(verse)
+        }
+      } else {
+        // Exit memorization/review if we're going back
+        memorizingVerse.value = null
+        memorizationMode.value = null
+        reviewingVerse.value = null
+        reviewWords.value = []
+        typedLetter.value = ''
+        reviewMistakes.value = 0
+      }
+      
+      // Use nextTick to ensure DOM updates before resetting flag
+      nextTick(() => {
+        isHandlingBackButton = false
+      })
+    }
+
+    // Handle browser back/forward button
+    const handlePopState = (event) => {
+      if (event.state) {
+        restoreNavigationState(event.state)
+      } else {
+        // If no state, restore to collections view
+        restoreNavigationState({ view: 'collections' })
+      }
+    }
+
+    // Initialize history state on mount
+    const initializeHistory = () => {
+      const initialState = getNavigationState()
+      window.history.replaceState(initialState, '', window.location.href)
+      window.addEventListener('popstate', handlePopState)
+    }
 
     // Computed properties
     const revealedCount = computed(() => {
@@ -2208,11 +2320,13 @@ export default {
     // View collection
     const viewCollection = (collectionId) => {
       currentCollectionId.value = collectionId
+      pushNavigationState({ view: 'collection', collectionId })
     }
 
     // View all verses
     const viewAllVerses = () => {
       currentCollectionId.value = null
+      pushNavigationState({ view: 'collections' })
     }
 
     // Check if we can switch to a given memorization mode
@@ -2276,6 +2390,14 @@ export default {
       
       typedLetter.value = ''
       
+      // Push navigation state
+      pushNavigationState({
+        view: 'memorization',
+        verseId: verse.id,
+        mode: mode,
+        collectionId: currentCollectionId.value
+      })
+      
       // Focus input after DOM update
       nextTick(() => {
         if (reviewInput.value) {
@@ -2297,6 +2419,13 @@ export default {
       
       reviewingVerse.value = verse
       reviewMistakes.value = 0 // Reset mistake counter
+      
+      // Push navigation state
+      pushNavigationState({
+        view: 'review',
+        verseId: verse.id,
+        collectionId: currentCollectionId.value
+      })
       // Split verse content into words by whitespace
       const words = verse.content.split(/\s+/).filter(word => word.trim().length > 0)
       reviewWords.value = words.map(word => {
@@ -2385,11 +2514,23 @@ export default {
         }
       }
       
-      memorizingVerse.value = null
-      memorizationMode.value = null
-      reviewWords.value = []
-      typedLetter.value = ''
-      reviewMistakes.value = 0
+      // Use browser back if not already handling a back button press
+      if (!isHandlingBackButton && window.history.length > 1) {
+        window.history.back()
+      } else {
+        // Fallback: manually restore state if no history
+        memorizingVerse.value = null
+        memorizationMode.value = null
+        reviewWords.value = []
+        typedLetter.value = ''
+        reviewMistakes.value = 0
+        
+        if (currentCollectionId.value) {
+          pushNavigationState({ view: 'collection', collectionId: currentCollectionId.value })
+        } else {
+          pushNavigationState({ view: 'collections' })
+        }
+      }
     }
 
     // Retry memorization (reset without saving)
@@ -2489,10 +2630,22 @@ export default {
         }
       }
       
-      reviewingVerse.value = null
-      reviewWords.value = []
-      typedLetter.value = ''
-      reviewMistakes.value = 0
+      // Use browser back if not already handling a back button press
+      if (!isHandlingBackButton && window.history.length > 1) {
+        window.history.back()
+      } else {
+        // Fallback: manually restore state if no history
+        reviewingVerse.value = null
+        reviewWords.value = []
+        typedLetter.value = ''
+        reviewMistakes.value = 0
+        
+        if (currentCollectionId.value) {
+          pushNavigationState({ view: 'collection', collectionId: currentCollectionId.value })
+        } else {
+          pushNavigationState({ view: 'collections' })
+        }
+      }
     }
 
     // Focus input when clicking on verse text
@@ -2857,8 +3010,16 @@ export default {
       loadVerses()
       loadWebDAVSettings()
       
+      // Initialize history state tracking for back button
+      initializeHistory()
+      
       // Perform initial sync on app load
       await triggerSync()
+    })
+
+    // Cleanup event listener on unmount
+    onBeforeUnmount(() => {
+      window.removeEventListener('popstate', handlePopState)
     })
 
     return {
