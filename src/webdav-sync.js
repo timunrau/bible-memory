@@ -76,6 +76,7 @@ export function markVerseDeleted(verseId) {
   if (!deleted.includes(verseId)) {
     deleted.push(verseId)
     localStorage.setItem(DELETED_VERSES_KEY, JSON.stringify(deleted))
+    console.log('[WebDAV] Marked verse as deleted:', verseId, 'Deleted list:', deleted)
   }
 }
 
@@ -87,6 +88,7 @@ export function markCollectionDeleted(collectionId) {
   if (!deleted.includes(collectionId)) {
     deleted.push(collectionId)
     localStorage.setItem(DELETED_COLLECTIONS_KEY, JSON.stringify(deleted))
+    console.log('[WebDAV] Marked collection as deleted:', collectionId, 'Deleted list:', deleted)
   }
 }
 
@@ -300,6 +302,7 @@ export async function uploadToWebDAV(verses, collections) {
     
     const content = JSON.stringify(data, null, 2)
     console.log(`[WebDAV] Uploading ${data.verses.length} verses and ${data.collections.length} collections`)
+    console.log(`[WebDAV] Uploading ${deletedVerses.length} deleted verses and ${deletedCollections.length} deleted collections`)
     
     // Ensure directory exists (for folder option, though Nextcloud paths usually don't need this)
     if (settings.folder && settings.folder.trim()) {
@@ -361,6 +364,9 @@ function mergeData(localVerses, localCollections, remoteData) {
   const localDeletedVerses = new Set(getDeletedVerses())
   const localDeletedCollections = new Set(getDeletedCollections())
   
+  console.log('[WebDAV] mergeData - remote deleted collections:', Array.from(remoteDeletedCollections))
+  console.log('[WebDAV] mergeData - local deleted collections:', Array.from(localDeletedCollections))
+  
   // Combine deletions from both sources
   const allDeletedVerseIds = new Set([...remoteDeletedVerses, ...localDeletedVerses])
   const allDeletedCollectionIds = new Set([...remoteDeletedCollections, ...localDeletedCollections])
@@ -372,9 +378,14 @@ function mergeData(localVerses, localCollections, remoteData) {
   const finalDeletedVerseIds = new Set([...allDeletedVerseIds].filter(id => !localVerseIds.has(id)))
   const finalDeletedCollectionIds = new Set([...allDeletedCollectionIds].filter(id => !localCollectionIds.has(id)))
   
+  console.log('[WebDAV] mergeData - final deleted collections:', Array.from(finalDeletedCollectionIds))
+  console.log('[WebDAV] mergeData - local collection IDs:', Array.from(localCollectionIds))
+  
   // Update localStorage with merged deletion lists
   localStorage.setItem(DELETED_VERSES_KEY, JSON.stringify([...finalDeletedVerseIds]))
   localStorage.setItem(DELETED_COLLECTIONS_KEY, JSON.stringify([...finalDeletedCollectionIds]))
+  
+  console.log('[WebDAV] Merged deletion lists - verses:', Array.from(finalDeletedVerseIds), 'collections:', Array.from(finalDeletedCollectionIds))
 
   // Merge verses
   const verseMap = new Map()
@@ -425,10 +436,14 @@ function mergeData(localVerses, localCollections, remoteData) {
   // Merge collections
   const collectionMap = new Map()
   
+  console.log('[WebDAV] Merging collections - local:', localCollections.length, 'remote:', remoteCollections.length)
+  console.log('[WebDAV] Deleted collection IDs:', Array.from(finalDeletedCollectionIds))
+  
   // Add all local collections (excluding deleted ones)
   ;(localCollections || []).forEach(collection => {
     // Skip if this collection was deleted (locally or remotely)
     if (finalDeletedCollectionIds.has(collection.id)) {
+      console.log('[WebDAV] Skipping deleted local collection:', collection.id)
       return
     }
     collectionMap.set(collection.id, { ...collection, source: 'local' })
@@ -438,12 +453,14 @@ function mergeData(localVerses, localCollections, remoteData) {
   remoteCollections.forEach(collection => {
     // Skip if this collection was deleted (locally or remotely)
     if (finalDeletedCollectionIds.has(collection.id)) {
+      console.log('[WebDAV] Skipping deleted remote collection:', collection.id)
       return
     }
     
     const existing = collectionMap.get(collection.id)
     if (!existing) {
       // New collection from remote
+      console.log('[WebDAV] Adding new collection from remote:', collection.id)
       collectionMap.set(collection.id, { ...collection, source: 'remote' })
     } else {
       // Conflict: use the one with more recent createdAt
@@ -462,6 +479,7 @@ function mergeData(localVerses, localCollections, remoteData) {
   })
   
   const mergedCollections = Array.from(collectionMap.values())
+  console.log('[WebDAV] Merged collections count:', mergedCollections.length)
 
   return {
     verses: mergedVerses,
@@ -501,9 +519,14 @@ export async function syncData(localVerses, localCollections) {
     const remoteDeletedVerses = new Set(remoteData.deletedVerses || [])
     const remoteDeletedCollections = new Set(remoteData.deletedCollections || [])
     
+    console.log('[WebDAV] Remote deletions - verses:', Array.from(remoteDeletedVerses), 'collections:', Array.from(remoteDeletedCollections))
+    console.log('[WebDAV] Local deletions before merge - verses:', getDeletedVerses(), 'collections:', getDeletedCollections())
+    
     // Filter out locally deleted items from local arrays
     let cleanedLocalVerses = (localVerses || []).filter(v => !remoteDeletedVerses.has(v.id))
     let cleanedLocalCollections = (localCollections || []).filter(c => !remoteDeletedCollections.has(c.id))
+    
+    console.log('[WebDAV] After filtering remote deletions - verses:', cleanedLocalVerses.length, 'collections:', cleanedLocalCollections.length)
     
     // Remove deleted collection IDs from verses
     cleanedLocalVerses = cleanedLocalVerses.map(verse => {
@@ -517,8 +540,45 @@ export async function syncData(localVerses, localCollections) {
     // Merge data (using cleaned local data)
     const merged = mergeData(cleanedLocalVerses, cleanedLocalCollections, remoteData)
     
-    // Upload merged data
-    await uploadToWebDAV(merged.verses, merged.collections)
+    // Get the final merged deletion lists (updated by mergeData)
+    const finalDeletedVerses = new Set(getDeletedVerses())
+    const finalDeletedCollections = new Set(getDeletedCollections())
+    
+    console.log('[WebDAV] Final deletion lists after merge - verses:', Array.from(finalDeletedVerses), 'collections:', Array.from(finalDeletedCollections))
+    console.log('[WebDAV] Merged result before final filter - verses:', merged.verses.length, 'collections:', merged.collections.length)
+    
+    // Final safety check: ensure no deleted items are in the merged result
+    const finalVerses = merged.verses.filter(v => {
+      if (finalDeletedVerses.has(v.id)) {
+        console.log('[WebDAV] Filtering out deleted verse:', v.id)
+        return false
+      }
+      return true
+    })
+    const finalCollections = merged.collections.filter(c => {
+      if (finalDeletedCollections.has(c.id)) {
+        console.log('[WebDAV] Filtering out deleted collection:', c.id)
+        return false
+      }
+      return true
+    })
+    
+    // Remove deleted collection IDs from final verses
+    const cleanedFinalVerses = finalVerses.map(verse => {
+      if (verse.collectionIds && verse.collectionIds.length > 0) {
+        const cleanedCollectionIds = verse.collectionIds.filter(id => !finalDeletedCollections.has(id))
+        if (cleanedCollectionIds.length !== verse.collectionIds.length) {
+          console.log('[WebDAV] Removed deleted collection IDs from verse:', verse.id, 'removed:', verse.collectionIds.filter(id => finalDeletedCollections.has(id)))
+        }
+        return { ...verse, collectionIds: cleanedCollectionIds }
+      }
+      return verse
+    })
+    
+    console.log('[WebDAV] Final result after filtering - verses:', cleanedFinalVerses.length, 'collections:', finalCollections.length)
+    
+    // Upload merged data (with deletions included in the upload)
+    await uploadToWebDAV(cleanedFinalVerses, finalCollections)
     
     // Clear deletions that have been synced (no longer in remote data)
     clearSyncedDeletions(remoteData.verses, remoteData.collections)
@@ -526,8 +586,8 @@ export async function syncData(localVerses, localCollections) {
     return {
       success: true,
       action: 'synced',
-      verses: merged.verses,
-      collections: merged.collections
+      verses: cleanedFinalVerses,
+      collections: finalCollections
     }
   } catch (error) {
     console.error('Sync error:', error)

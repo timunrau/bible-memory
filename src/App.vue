@@ -1176,7 +1176,8 @@ import {
   syncData, 
   testWebDAVConnection as testConnection,
   markVerseDeleted,
-  markCollectionDeleted
+  markCollectionDeleted,
+  getDeletedCollections
 } from './webdav-sync.js'
 
 export default {
@@ -1765,8 +1766,12 @@ export default {
     // Delete collection
     const deleteCollection = (collectionId) => {
       if (confirm('Are you sure you want to delete this collection? Verses will not be deleted, but will be removed from this collection.')) {
-        // Mark as deleted for sync
+        // Mark as deleted for sync FIRST (before removing from array)
         markCollectionDeleted(collectionId)
+        
+        // Verify deletion was saved
+        const deletedAfterMark = getDeletedCollections()
+        console.log('[App] Collection deleted, deletion list:', deletedAfterMark, 'should include:', collectionId)
         
         // Remove collection from all verses
         verses.value.forEach(verse => {
