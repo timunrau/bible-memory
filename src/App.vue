@@ -81,7 +81,7 @@
           >
             <span
               v-if="memorizationMode === 'learn'"
-              :class="word.revealed ? 'text-gray-900 font-semibold' : 'text-gray-300'"
+              :class="word.revealed ? (word.incorrect ? 'text-red-600 font-semibold' : 'text-gray-900 font-semibold') : 'text-gray-300'"
             >
               {{ word.text }}
             </span>
@@ -91,7 +91,7 @@
               <span v-if="word.visible && !word.revealed" class="text-gray-300">
                 {{ word.text }}
               </span>
-              <span v-else-if="word.revealed" class="text-gray-900">
+              <span v-else-if="word.revealed" :class="word.incorrect ? 'text-red-600' : 'text-gray-900'">
                 {{ word.text }}
               </span>
               <span v-else class="text-gray-300">
@@ -101,7 +101,7 @@
             <span
               v-else-if="memorizationMode === 'master'"
             >
-              <span v-if="word.revealed" class="text-gray-900">
+              <span v-if="word.revealed" :class="word.incorrect ? 'text-red-600' : 'text-gray-900'">
                 {{ word.text }}
               </span>
               <span v-else class="text-gray-300">
@@ -235,7 +235,7 @@
             :key="index"
             class="inline-block mr-2"
           >
-            <span v-if="word.revealed" class="text-gray-900">
+            <span v-if="word.revealed" :class="word.incorrect ? 'text-red-600' : 'text-gray-900'">
               {{ word.text }}
             </span>
             <span v-else class="text-gray-300">
@@ -1439,7 +1439,8 @@ export default {
           revealed: revealed,
           visible: visible,
           firstLetter: firstLetter,
-          index: index
+          index: index,
+          incorrect: false
         }
       })
       
@@ -1476,7 +1477,8 @@ export default {
         return {
           text: word,
           revealed: false,
-          firstLetter: firstLetter
+          firstLetter: firstLetter,
+          incorrect: false
         }
       })
       typedLetter.value = ''
@@ -1705,8 +1707,9 @@ export default {
         
         // Check if the letter matches the first letter of the next word
         if (letter === nextWord.firstLetter) {
-          // Reveal the word
+          // Correct letter - reveal the word normally
           nextWord.revealed = true
+          nextWord.incorrect = false
           if (memorizationMode.value === 'learn' || memorizationMode.value === 'memorize') {
             nextWord.visible = true // Make it visible in learn/memorize modes
           }
@@ -1719,9 +1722,21 @@ export default {
             }
           })
         } else {
-          // Wrong letter - increment mistake counter and clear input
+          // Wrong letter - reveal the word but mark it as incorrect
+          nextWord.revealed = true
+          nextWord.incorrect = true
+          if (memorizationMode.value === 'learn' || memorizationMode.value === 'memorize') {
+            nextWord.visible = true // Make it visible in learn/memorize modes
+          }
           reviewMistakes.value++
           typedLetter.value = ''
+          
+          // Auto-focus input for next word
+          nextTick(() => {
+            if (reviewInput.value) {
+              reviewInput.value.focus()
+            }
+          })
         }
       }
     }
