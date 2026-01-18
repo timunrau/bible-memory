@@ -371,12 +371,33 @@ function mergeData(localVerses, localCollections, remoteData) {
   const allDeletedVerseIds = new Set([...remoteDeletedVerses, ...localDeletedVerses])
   const allDeletedCollectionIds = new Set([...remoteDeletedCollections, ...localDeletedCollections])
   
-  // Remove from deleted list if item exists locally (was re-added)
+  // CRITICAL FIX: If an item is in the LOCAL deletion list, NEVER remove it from the deletion list
+  // even if it exists in the local array. This handles the case where a collection was just deleted
+  // but is still in the local array when mergeData is called (timing issue).
   const localVerseIds = new Set((localVerses || []).map(v => v.id))
   const localCollectionIds = new Set((localCollections || []).map(c => c.id))
   
-  const finalDeletedVerseIds = new Set([...allDeletedVerseIds].filter(id => !localVerseIds.has(id)))
-  const finalDeletedCollectionIds = new Set([...allDeletedCollectionIds].filter(id => !localCollectionIds.has(id)))
+  // For verses: Keep in deletion list if deleted remotely OR locally
+  // Only remove if it exists locally AND is NOT in any deletion list (was re-added)
+  const finalDeletedVerseIds = new Set([...allDeletedVerseIds].filter(id => {
+    // Always keep if deleted remotely (another device deleted it)
+    if (remoteDeletedVerses.has(id)) return true
+    // Always keep if deleted locally (we just deleted it) - THIS IS THE KEY FIX
+    if (localDeletedVerses.has(id)) return true
+    // Only remove if it exists locally but wasn't in any deletion list (was re-added)
+    return !localVerseIds.has(id)
+  }))
+  
+  // For collections: Keep in deletion list if deleted remotely OR locally
+  // Only remove if it exists locally AND is NOT in any deletion list (was re-added)
+  const finalDeletedCollectionIds = new Set([...allDeletedCollectionIds].filter(id => {
+    // Always keep if deleted remotely (another device deleted it)
+    if (remoteDeletedCollections.has(id)) return true
+    // Always keep if deleted locally (we just deleted it) - THIS IS THE KEY FIX
+    if (localDeletedCollections.has(id)) return true
+    // Only remove if it exists locally but wasn't in any deletion list (was re-added)
+    return !localCollectionIds.has(id)
+  }))
   
   console.log('[WebDAV] mergeData - final deleted collections:', Array.from(finalDeletedCollectionIds))
   console.log('[WebDAV] mergeData - local collection IDs:', Array.from(localCollectionIds))
@@ -518,20 +539,28 @@ export async function syncData(localVerses, localCollections) {
     // This ensures that items deleted on other devices are removed locally
     const remoteDeletedVerses = new Set(remoteData.deletedVerses || [])
     const remoteDeletedCollections = new Set(remoteData.deletedCollections || [])
+    const localDeletedVerses = new Set(getDeletedVerses())
+    const localDeletedCollections = new Set(getDeletedCollections())
     
     console.log('[WebDAV] Remote deletions - verses:', Array.from(remoteDeletedVerses), 'collections:', Array.from(remoteDeletedCollections))
-    console.log('[WebDAV] Local deletions before merge - verses:', getDeletedVerses(), 'collections:', getDeletedCollections())
+    console.log('[WebDAV] Local deletions before merge - verses:', Array.from(localDeletedVerses), 'collections:', Array.from(localDeletedCollections))
     
-    // Filter out locally deleted items from local arrays
-    let cleanedLocalVerses = (localVerses || []).filter(v => !remoteDeletedVerses.has(v.id))
-    let cleanedLocalCollections = (localCollections || []).filter(c => !remoteDeletedCollections.has(c.id))
+    // Filter out ALL deleted items (both remote and local) from local arrays
+    // This ensures that locally deleted items don't get re-added from remote
+    let cleanedLocalVerses = (localVerses || []).filter(v => {
+      return !remoteDeletedVerses.has(v.id) && !localDeletedVerses.has(v.id)
+    })
+    let cleanedLocalCollections = (localCollections || []).filter(c => {
+      return !remoteDeletedCollections.has(c.id) && !localDeletedCollections.has(c.id)
+    })
     
-    console.log('[WebDAV] After filtering remote deletions - verses:', cleanedLocalVerses.length, 'collections:', cleanedLocalCollections.length)
+    console.log('[WebDAV] After filtering ALL deletions - verses:', cleanedLocalVerses.length, 'collections:', cleanedLocalCollections.length)
     
-    // Remove deleted collection IDs from verses
+    // Remove deleted collection IDs from verses (both remote and local deletions)
+    const allDeletedCollections = new Set([...remoteDeletedCollections, ...localDeletedCollections])
     cleanedLocalVerses = cleanedLocalVerses.map(verse => {
       if (verse.collectionIds && verse.collectionIds.length > 0) {
-        const cleanedCollectionIds = verse.collectionIds.filter(id => !remoteDeletedCollections.has(id))
+        const cleanedCollectionIds = verse.collectionIds.filter(id => !allDeletedCollections.has(id))
         return { ...verse, collectionIds: cleanedCollectionIds }
       }
       return verse
