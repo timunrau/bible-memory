@@ -2,10 +2,11 @@
   <!-- Memorization Screen -->
   <div
     v-if="memorizingVerse"
-    class="fixed inset-0 bg-gray-50 z-50"
+    class="fixed inset-0 bg-gray-50 z-50 flex flex-col"
+    style="height: 100dvh;"
   >
     <!-- Top App Bar -->
-    <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-40">
+    <header class="bg-white shadow-sm z-40 flex-shrink-0">
       <div class="h-16 flex items-center px-4">
         <button
           @click="exitMemorization"
@@ -21,7 +22,7 @@
       </div>
     </header>
 
-    <div class="max-w-4xl mx-auto pt-16 pb-8 px-4">
+    <div class="flex-1 overflow-y-auto max-w-4xl mx-auto w-full px-4 py-4">
       <div class="mb-6">
         
         <!-- Progress Indicator -->
@@ -61,17 +62,11 @@
             </svg>
           </div>
         </div>
-        
-        <p class="text-gray-600">
-          <span v-if="memorizationMode === 'learn'">Type the first letter of each word to turn it black</span>
-          <span v-else-if="memorizationMode === 'memorize'">Type the first letter of each hidden word to reveal it</span>
-          <span v-else-if="memorizationMode === 'master'">Type the first letter of each word to reveal it</span>
-        </p>
       </div>
 
-      <div class="bg-white rounded-lg shadow-xl p-8 mb-6">
+      <div class="bg-white rounded-lg shadow-xl p-4 my-4">
         <div
-          class="text-2xl leading-relaxed text-gray-900 font-serif min-h-[200px]"
+          class="text-xl leading-relaxed text-gray-900 font-serif min-h-[200px]"
           @click="focusInput"
         >
           <span
@@ -140,6 +135,9 @@
           autocorrect="off"
           autocapitalize="off"
           spellcheck="false"
+          inputmode="text"
+          name="letter-input"
+          id="letter-input-memorize"
           class="absolute opacity-0 w-0 h-0"
         />
       </div>
@@ -199,10 +197,11 @@
   <!-- Review Screen -->
   <div
     v-if="reviewingVerse"
-    class="fixed inset-0 bg-gray-50 z-50"
+    class="fixed inset-0 bg-gray-50 z-50 flex flex-col"
+    style="height: 100dvh;"
   >
     <!-- Top App Bar -->
-    <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-40">
+    <header class="bg-white shadow-sm z-40 flex-shrink-0">
       <div class="h-16 flex items-center px-4">
         <button
           @click="exitReview"
@@ -218,32 +217,32 @@
       </div>
     </header>
 
-    <div class="max-w-4xl mx-auto pt-16 pb-8 px-4">
-      <div class="mb-6">
-        <p class="text-gray-600 text-center">Type the first letter of each word to reveal it</p>
-      </div>
-
-      <div class="bg-white rounded-lg shadow-xl p-8 mb-6">
-        <div
-          class="text-2xl leading-relaxed text-gray-900 font-serif min-h-[200px]"
-          @click="focusInput"
-        >
-          <span
-            v-for="(word, index) in reviewWords"
-            :key="index"
-            class="inline-block mr-2"
+    <div class="flex-1 flex flex-col overflow-hidden max-w-4xl mx-auto w-full px-4">
+      <!-- Scrollable text box -->
+      <div class="flex-1 overflow-y-auto min-h-0 py-4">
+        <div class="bg-white rounded-lg shadow-xl p-4">
+          <div
+            class="text-xl leading-relaxed text-gray-900 font-serif"
+            @click="focusInput"
           >
-            <span v-if="word.revealed" :class="word.incorrect ? 'text-red-600' : 'text-gray-900'">
-              {{ word.text }}
+            <span
+              v-for="(word, index) in reviewWords"
+              :key="index"
+              class="inline-block mr-2"
+            >
+              <span v-if="word.revealed" :class="word.incorrect ? 'text-red-600' : 'text-gray-900'">
+                {{ word.text }}
+              </span>
+              <span v-else class="text-gray-300">
+                {{ '_'.repeat(word.text.length) }}
+              </span>
             </span>
-            <span v-else class="text-gray-300">
-              {{ '_'.repeat(word.text.length) }}
-            </span>
-          </span>
+          </div>
         </div>
       </div>
 
-      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+      <!-- Progress section - stays above keyboard -->
+      <div class="flex-shrink-0 bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
         <div class="flex justify-between items-center mb-2">
           <p class="text-sm text-blue-800">
             <strong>Progress:</strong> {{ revealedCount }} / {{ reviewWords.length }} words revealed
@@ -274,9 +273,13 @@
           autocorrect="off"
           autocapitalize="off"
           spellcheck="false"
+          inputmode="text"
+          name="letter-input"
+          id="letter-input-review"
           class="absolute opacity-0 w-0 h-0"
         />
       </div>
+    </div>
 
       <!-- Completion Modal for Review -->
       <div
@@ -321,7 +324,6 @@
           </div>
         </div>
       </div>
-    </div>
   </div>
 
   <!-- Main Content -->

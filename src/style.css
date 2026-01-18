@@ -9,4 +9,19 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Prevent body from scrolling when keyboard is open */
+  overflow: hidden;
+  height: 100dvh;
+}
+
+#app {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* Support for dynamic viewport height on mobile */
+@supports (height: 100dvh) {
+  html {
+    height: 100dvh;
+  }
 }
