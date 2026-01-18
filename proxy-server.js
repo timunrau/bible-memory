@@ -87,8 +87,8 @@ app.use((req, res, next) => {
   // Debug logging
   console.log(`[Proxy] Target origin: ${target.origin}`)
   console.log(`[Proxy] Target pathname: ${target.pathname}`)
-  console.log(`[Proxy] Original request path: ${req.path}`)
-  console.log(`[Proxy] Processed request path: ${requestPath}`)
+  console.log(`[Proxy] Original request path (req.path): ${req.path}`)
+  console.log(`[Proxy] After stripping /api/webdav: ${requestPath}`)
   console.log(`[Proxy] Final target path: ${targetPath}`)
   console.log(`[Proxy] Forwarding to: ${target.origin}${targetPath}`)
 
@@ -96,7 +96,10 @@ app.use((req, res, next) => {
   const proxy = createProxyMiddleware({
     target: target.origin,
     changeOrigin: true,
-    pathRewrite: () => targetPath,
+    pathRewrite: (path, req) => {
+      // We've already processed the path, so just return the targetPath
+      return targetPath
+    },
     timeout: 60000, // 60 second timeout (increase for large uploads)
     proxyTimeout: 60000,
     // Increase body size limit for file uploads
