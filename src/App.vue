@@ -2,22 +2,27 @@
   <!-- Memorization Screen -->
   <div
     v-if="memorizingVerse"
-    class="fixed inset-0 bg-gray-50 z-50 overflow-y-auto"
+    class="fixed inset-0 bg-gray-50 z-50"
   >
-    <div class="max-w-4xl mx-auto py-8 px-4">
-      <div class="mb-6">
+    <!-- Top App Bar -->
+    <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-40">
+      <div class="h-16 flex items-center px-4">
         <button
           @click="exitMemorization"
-          class="text-gray-600 hover:text-gray-900 mb-4 flex items-center"
+          class="p-2 -ml-2 mr-1 text-gray-700 active:bg-gray-100 rounded-full transition-colors"
         >
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
           </svg>
-          Back to Verses
         </button>
-        <h2 class="text-3xl font-bold text-gray-900 mb-2">
+        <h1 class="text-xl font-semibold text-gray-900 flex-1 text-center mr-11">
           {{ memorizingVerse.reference }}
-        </h2>
+        </h1>
+      </div>
+    </header>
+
+    <div class="max-w-4xl mx-auto pt-16 pb-8 px-4">
+      <div class="mb-6">
         
         <!-- Progress Indicator -->
         <div class="flex items-center gap-2 mb-4">
@@ -144,9 +149,9 @@
       <!-- Completion Modal for Memorization -->
       <div
         v-if="allWordsRevealed && memorizationMode"
-        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+        class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
       >
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+        <div class="bg-white rounded-3xl shadow-xl max-w-md w-full p-6">
           <p class="text-2xl font-bold text-green-800 mb-2 text-center">🎉 Great job!</p>
           <p class="text-green-700 text-center mb-6">
             <span v-if="memorizationMode === 'learn'">You've learned this verse! Ready to memorize it?</span>
@@ -177,184 +182,166 @@
   <!-- Review Screen -->
   <div
     v-if="reviewingVerse"
-    class="fixed inset-0 bg-gray-50 z-50 overflow-y-auto"
+    class="fixed inset-0 bg-gray-50 z-50"
   >
-        <div class="max-w-4xl mx-auto py-8 px-4">
-          <div class="mb-6">
-            <button
-              @click="exitReview"
-              class="text-gray-600 hover:text-gray-900 mb-4 flex items-center"
-            >
-              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-              </svg>
-              Back to Verses
-            </button>
-            <h2 class="text-3xl font-bold text-gray-900 mb-2">
-              {{ reviewingVerse.reference }}
-            </h2>
-            <p class="text-gray-600">Type the first letter of each word to reveal it</p>
-          </div>
+    <!-- Top App Bar -->
+    <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-40">
+      <div class="h-16 flex items-center px-4">
+        <button
+          @click="exitReview"
+          class="p-2 -ml-2 mr-1 text-gray-700 active:bg-gray-100 rounded-full transition-colors"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h1 class="text-xl font-semibold text-gray-900 flex-1 text-center mr-11">
+          {{ reviewingVerse.reference }}
+        </h1>
+      </div>
+    </header>
 
-          <div class="bg-white rounded-lg shadow-xl p-8 mb-6">
-            <div
-              class="text-2xl leading-relaxed text-gray-900 font-serif min-h-[200px]"
-              @click="focusInput"
-            >
-              <span
-                v-for="(word, index) in reviewWords"
-                :key="index"
-                class="inline-block mr-2"
-              >
-                <span v-if="word.revealed" class="text-gray-900">
-                  {{ word.text }}
-                </span>
-                <span v-else class="text-gray-300">
-                  {{ '_'.repeat(word.text.length) }}
-                </span>
-              </span>
-            </div>
-          </div>
+    <div class="max-w-4xl mx-auto pt-16 pb-8 px-4">
+      <div class="mb-6">
+        <p class="text-gray-600 text-center">Type the first letter of each word to reveal it</p>
+      </div>
 
-          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <div class="flex justify-between items-center mb-2">
-              <p class="text-sm text-blue-800">
-                <strong>Progress:</strong> {{ revealedCount }} / {{ reviewWords.length }} words revealed
-              </p>
-              <p class="text-sm text-blue-800">
-                <strong>Mistakes:</strong> {{ reviewMistakes }}
-              </p>
-            </div>
-            <div class="mt-2 w-full bg-blue-200 rounded-full h-2">
-              <div
-                class="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                :style="{ width: `${(revealedCount / reviewWords.length) * 100}%` }"
-              ></div>
-            </div>
-            <div v-if="reviewWords.length > 0" class="mt-2 text-xs text-blue-700">
-              <strong>Accuracy:</strong> {{ ((reviewWords.length - reviewMistakes) / reviewWords.length * 100).toFixed(1) }}%
-            </div>
-          </div>
-
-          <div class="text-center">
-            <input
-              ref="reviewInput"
-              v-model="typedLetter"
-              @keydown="handleKeyPress"
-              @input="checkLetter"
-              type="text"
-              autocomplete="off"
-              autocorrect="off"
-              autocapitalize="off"
-              spellcheck="false"
-              class="w-full max-w-md mx-auto px-4 py-3 text-2xl text-center border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none uppercase tracking-widest"
-              placeholder="Type here..."
-            />
-            <p class="text-sm text-gray-500 mt-2">Type the first letter of the next word</p>
-          </div>
-
-          <!-- Completion Modal for Review -->
-          <div
-            v-if="allWordsRevealed && reviewingVerse"
-            class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      <div class="bg-white rounded-lg shadow-xl p-8 mb-6">
+        <div
+          class="text-2xl leading-relaxed text-gray-900 font-serif min-h-[200px]"
+          @click="focusInput"
+        >
+          <span
+            v-for="(word, index) in reviewWords"
+            :key="index"
+            class="inline-block mr-2"
           >
-            <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-              <p class="text-2xl font-bold text-green-800 mb-2 text-center">🎉 Great job!</p>
-              <p class="text-green-700 text-center mb-6">You've revealed all the words in this verse.</p>
-              <div class="flex justify-center gap-3">
-                <button
-                  @click="retryReview"
-                  class="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-semibold transition-colors duration-200"
-                >
-                  Retry
-                </button>
-                <button
-                  @click="nextVerse"
-                  class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors duration-200"
-                >
-                  Next Verse
-                </button>
-              </div>
-            </div>
-          </div>
+            <span v-if="word.revealed" class="text-gray-900">
+              {{ word.text }}
+            </span>
+            <span v-else class="text-gray-300">
+              {{ '_'.repeat(word.text.length) }}
+            </span>
+          </span>
         </div>
       </div>
 
-  <!-- Main Content -->
-  <div v-else class="min-h-screen bg-gray-50 py-8 px-4">
-    <div class="max-w-4xl mx-auto">
-      <header class="mb-8">
-        <div class="flex items-center justify-between mb-4">
-          <div>
-            <h1 class="text-4xl font-bold text-gray-900 mb-2">Bible Memory</h1>
-            <p class="text-gray-600">Your personal collection of verses</p>
-          </div>
-          <div v-if="currentCollectionId" class="flex items-center gap-2">
+      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <div class="flex justify-between items-center mb-2">
+          <p class="text-sm text-blue-800">
+            <strong>Progress:</strong> {{ revealedCount }} / {{ reviewWords.length }} words revealed
+          </p>
+          <p class="text-sm text-blue-800">
+            <strong>Mistakes:</strong> {{ reviewMistakes }}
+          </p>
+        </div>
+        <div class="mt-2 w-full bg-blue-200 rounded-full h-2">
+          <div
+            class="bg-blue-600 h-2 rounded-full transition-all duration-300"
+            :style="{ width: `${(revealedCount / reviewWords.length) * 100}%` }"
+          ></div>
+        </div>
+        <div v-if="reviewWords.length > 0" class="mt-2 text-xs text-blue-700">
+          <strong>Accuracy:</strong> {{ ((reviewWords.length - reviewMistakes) / reviewWords.length * 100).toFixed(1) }}%
+        </div>
+      </div>
+
+      <div class="text-center">
+        <input
+          ref="reviewInput"
+          v-model="typedLetter"
+          @keydown="handleKeyPress"
+          @input="checkLetter"
+          type="text"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+          class="w-full max-w-md mx-auto px-4 py-3 text-2xl text-center border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none uppercase tracking-widest"
+          placeholder="Type here..."
+        />
+        <p class="text-sm text-gray-500 mt-2">Type the first letter of the next word</p>
+      </div>
+
+      <!-- Completion Modal for Review -->
+      <div
+        v-if="allWordsRevealed && reviewingVerse"
+        class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+      >
+        <div class="bg-white rounded-3xl shadow-xl max-w-md w-full p-6">
+          <p class="text-2xl font-bold text-green-800 mb-2 text-center">🎉 Great job!</p>
+          <p class="text-green-700 text-center mb-6">You've revealed all the words in this verse.</p>
+          <div class="flex justify-center gap-3">
             <button
-              @click.stop="viewAllVerses"
-              class="text-gray-600 hover:text-gray-900"
+              @click="retryReview"
+              class="px-6 py-2.5 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-semibold transition-colors duration-200"
             >
-              ← Collections
+              Retry
+            </button>
+            <button
+              @click="nextVerse"
+              class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors duration-200"
+            >
+              Next Verse
             </button>
           </div>
         </div>
-        <div v-if="verses.length > 0" class="mt-4">
-          <div
-            :class="[
-              'inline-flex items-center px-4 py-2 rounded-lg',
-              dueVersesCount > 0 
-                ? 'bg-red-100 text-red-800' 
-                : 'bg-green-100 text-green-800'
-            ]"
-          >
-            <span class="font-semibold">
-              {{ dueVersesCount }} verse{{ dueVersesCount !== 1 ? 's' : '' }} due for review
-            </span>
-          </div>
-        </div>
-      </header>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div v-if="!memorizingVerse && !reviewingVerse" class="min-h-screen bg-gray-50">
+    <!-- Top App Bar -->
+    <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-40">
+      <div class="h-16 flex items-center px-4">
+        <button
+          v-if="currentCollectionId"
+          @click="viewAllVerses"
+          class="p-2 -ml-2 mr-1 text-gray-700 active:bg-gray-100 rounded-full transition-colors"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h1 class="text-xl font-semibold text-gray-900 flex-1 text-center" :class="{ 'mr-11': currentCollectionId }">
+          {{ currentCollectionId ? getCollectionName(currentCollectionId) : 'Collections' }}
+        </h1>
+      </div>
+    </header>
+
+    <!-- Content Area with top padding for fixed header -->
+    <div class="pt-16 pb-24 px-4">
+      <div class="max-w-4xl mx-auto">
 
       <!-- Collections View -->
-      <div v-if="!currentCollectionId" class="mb-8">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-2xl font-bold text-gray-900">Collections</h2>
-          <button
-            @click="showCollectionForm = true"
-            class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-colors duration-200 text-sm"
-          >
-            + New Collection
-          </button>
-        </div>
+      <div v-if="!currentCollectionId" class="py-4">
         
-        <div class="space-y-4 mb-8">
+        <div class="space-y-3">
           <!-- Master List Collection -->
           <div
             @click="viewCollection('master-list')"
-            class="bg-white rounded-lg shadow-md p-6 cursor-pointer hover:shadow-lg transition-shadow duration-200 border-l-4 border-blue-500"
+            class="bg-blue-50 rounded-2xl shadow-sm p-4 cursor-pointer active:scale-98 transition-all duration-200 border border-blue-200"
           >
             <div class="flex items-start justify-between mb-2">
-              <h3 class="text-xl font-semibold text-gray-800 flex-1">Master List</h3>
+              <h3 class="text-lg font-semibold text-blue-900 flex-1">Master List</h3>
             </div>
-            <p class="text-gray-600 text-sm mb-3">All your verses in one place</p>
             <div class="flex items-center justify-between">
               <div class="text-xs text-gray-500">
                 {{ verses.length }} verse{{ verses.length !== 1 ? 's' : '' }}
-                <span v-if="dueVersesCount > 0" class="ml-2">
-                  • {{ dueVersesCount }} due for review
-                </span>
               </div>
               <div class="flex items-center gap-2">
                 <span
                   v-if="dueVersesCount > 0"
-                  class="px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full"
+                  class="px-3 py-1 text-xs font-medium text-red-700 bg-red-100 rounded-full"
                 >
-                  {{ dueVersesCount }} Due
+                  {{ dueVersesCount }}
                 </span>
                 <span
                   v-else-if="verses.length > 0"
-                  class="px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full"
+                  class="px-3 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full"
                 >
-                  All caught up
+                  ✓
                 </span>
               </div>
             </div>
@@ -365,100 +352,92 @@
             v-for="collection in collections"
             :key="collection.id"
             @click="viewCollection(collection.id)"
-            class="bg-white rounded-lg shadow-md p-6 cursor-pointer hover:shadow-lg transition-shadow duration-200 border-l-4 border-green-500"
+            class="bg-white rounded-2xl shadow-sm p-4 cursor-pointer active:scale-98 transition-all duration-200 border border-gray-100"
           >
             <div class="flex items-start justify-between mb-2">
-              <h3 class="text-xl font-semibold text-gray-800 flex-1">{{ collection.name }}</h3>
+              <h3 class="text-lg font-semibold text-gray-800 flex-1">{{ collection.name }}</h3>
               <button
                 @click.stop="deleteCollection(collection.id)"
-                class="text-red-600 hover:text-red-800 text-sm px-2 py-1"
+                class="text-red-600 hover:bg-red-50 p-1 rounded-full -mr-1"
                 title="Delete collection"
               >
-                ×
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
-            <p v-if="collection.description" class="text-gray-600 text-sm mb-3">{{ collection.description }}</p>
+            <p v-if="collection.description" class="text-gray-500 text-sm mb-3 line-clamp-2">{{ collection.description }}</p>
             <div class="flex items-center justify-between">
               <div class="text-xs text-gray-500">
                 {{ getCollectionVerseCount(collection.id) }} verse{{ getCollectionVerseCount(collection.id) !== 1 ? 's' : '' }}
-                <span v-if="getCollectionDueCount(collection.id) > 0" class="ml-2">
-                  • {{ getCollectionDueCount(collection.id) }} due for review
-                </span>
               </div>
               <div class="flex items-center gap-2">
                 <span
                   v-if="getCollectionDueCount(collection.id) > 0"
-                  class="px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full"
+                  class="px-3 py-1 text-xs font-medium text-red-700 bg-red-100 rounded-full"
                 >
-                  {{ getCollectionDueCount(collection.id) }} Due
+                  {{ getCollectionDueCount(collection.id) }}
                 </span>
                 <span
                   v-else-if="getCollectionVerseCount(collection.id) > 0"
-                  class="px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full"
+                  class="px-3 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full"
                 >
-                  All caught up
+                  ✓
                 </span>
               </div>
             </div>
           </div>
 
           <!-- Empty state when no verses exist -->
-          <div v-if="verses.length === 0 && collections.length === 0" class="bg-white rounded-lg shadow-md p-12 text-center">
-            <p class="text-gray-500 text-lg mb-4">No verses yet. Add your first verse to get started!</p>
+          <div v-if="verses.length === 0 && collections.length === 0" class="bg-white rounded-2xl shadow-sm p-12 text-center mt-8">
+            <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+            <p class="text-gray-500 text-lg">No verses yet</p>
+            <p class="text-gray-400 text-sm mt-2">Tap + to add your first verse</p>
           </div>
         </div>
       </div>
 
       <!-- Collection View -->
-      <div v-if="currentCollectionId">
-        <h2 class="text-2xl font-bold text-gray-900 mb-4">
-          {{ getCollectionName(currentCollectionId) }}
-        </h2>
-
-        <div class="mb-6 flex gap-2">
-          <button
-            @click="showForm = true"
-            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition-colors duration-200"
-          >
-            + Add New Verse
-          </button>
-        </div>
-
+      <div v-if="currentCollectionId" class="py-4">
         <!-- Verse List -->
-        <div class="space-y-4">
+        <div class="space-y-3">
         <div
           v-for="verse in sortedVerses"
           :key="verse.id"
+          @click="handleVerseClick(verse)"
           :class="[
-            'bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-200',
+            'bg-white rounded-2xl shadow-sm p-4 border transition-all duration-200 cursor-pointer active:scale-98',
             verse.memorizationStatus === 'mastered' && isDueForReview(verse)
-              ? 'border-l-4 border-red-500'
+              ? 'border-red-200 bg-red-50'
               : verse.memorizationStatus === 'mastered'
-              ? 'border-l-4 border-blue-500'
-              : 'border-l-4 border-yellow-500'
+              ? 'border-blue-200'
+              : 'border-yellow-200 bg-yellow-50'
           ]"
         >
-          <div class="flex items-start justify-between mb-2">
-            <h3
-              @click="handleVerseClick(verse)"
-              class="text-xl font-semibold text-gray-800 cursor-pointer flex-1"
-            >
+          <div class="flex items-start justify-between mb-3">
+            <h3 class="text-lg font-semibold text-gray-800 flex-1">
               {{ verse.reference }}
             </h3>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1">
               <button
                 @click.stop="startEditVerse(verse)"
-                class="text-gray-600 hover:text-gray-900 text-sm px-2 py-1"
+                class="text-gray-600 hover:bg-gray-100 p-1.5 rounded-full"
                 title="Edit verse"
               >
-                ✎
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
               </button>
               <button
                 @click.stop="deleteVerse(verse.id)"
-                class="text-red-600 hover:text-red-800 text-sm px-2 py-1"
+                class="text-red-600 hover:bg-red-50 p-1.5 rounded-full"
                 title="Delete verse"
               >
-                ×
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
           </div>
@@ -473,7 +452,7 @@
               <span
                 v-if="verse.memorizationStatus !== 'mastered'"
                 :class="[
-                  'px-2 py-1 text-xs font-semibold rounded-full',
+                  'px-3 py-1 text-xs font-medium rounded-full',
                   verse.memorizationStatus === 'unmemorized'
                     ? 'bg-yellow-100 text-yellow-800'
                     : verse.memorizationStatus === 'learned'
@@ -485,13 +464,13 @@
               </span>
               <span
                 v-else-if="isDueForReview(verse)"
-                class="px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full"
+                class="px-3 py-1 text-xs font-medium text-red-700 bg-red-100 rounded-full"
               >
                 Due
               </span>
               <span
                 v-else
-                class="px-2 py-1 text-xs font-semibold text-blue-700 bg-blue-100 rounded-full"
+                class="px-3 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded-full"
               >
                 {{ getTimeUntilReview(verse) }}
               </span>
@@ -521,21 +500,37 @@
           </div>
         </div>
 
-          <div v-if="sortedVerses.length === 0" class="bg-white rounded-lg shadow-md p-12 text-center">
-            <p class="text-gray-500 text-lg">No verses in this collection yet.</p>
+          <div v-if="sortedVerses.length === 0" class="bg-white rounded-2xl shadow-sm p-12 text-center mt-8">
+            <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+            <p class="text-gray-500 text-lg">No verses yet</p>
+            <p class="text-gray-400 text-sm mt-2">Tap + to add a verse</p>
           </div>
         </div>
       </div>
+      </div>
     </div>
+
+    <!-- Floating Action Button -->
+    <button
+      @click="currentCollectionId ? showForm = true : showCollectionForm = true"
+      class="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-30"
+      :title="currentCollectionId ? 'Add new verse' : 'Add new collection'"
+    >
+      <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+      </svg>
+    </button>
   </div>
 
       <!-- Add Verse Form Modal -->
       <div
         v-if="showForm"
-        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+        class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
         @click.self="closeForm"
       >
-        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+        <div class="bg-white rounded-3xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
           <h2 class="text-2xl font-bold text-gray-900 mb-6">Add New Verse</h2>
           
           <form @submit.prevent="addVerse" class="space-y-4">
@@ -549,7 +544,7 @@
                 type="text"
                 placeholder="e.g., John 3:16"
                 required
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               />
             </div>
 
@@ -563,7 +558,7 @@
                 rows="6"
                 placeholder="Enter the verse text here..."
                 required
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
               ></textarea>
             </div>
 
@@ -593,13 +588,13 @@
               <button
                 type="button"
                 @click="closeForm"
-                class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+                class="px-6 py-2.5 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors duration-200 font-medium"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors duration-200"
+                class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors duration-200"
               >
                 Save Verse
               </button>
@@ -614,7 +609,7 @@
         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
         @click.self="closeEditVerseForm"
       >
-        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+        <div class="bg-white rounded-3xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
           <h2 class="text-2xl font-bold text-gray-900 mb-6">Edit Verse</h2>
           
           <form @submit.prevent="saveEditedVerse" class="space-y-4" v-if="editingVerse">
@@ -628,7 +623,7 @@
                 type="text"
                 placeholder="e.g., John 3:16"
                 required
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               />
             </div>
 
@@ -642,7 +637,7 @@
                 rows="6"
                 placeholder="Enter the verse text here..."
                 required
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
               ></textarea>
             </div>
 
@@ -672,13 +667,13 @@
               <button
                 type="button"
                 @click="closeEditVerseForm"
-                class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+                class="px-6 py-2.5 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors duration-200 font-medium"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors duration-200"
+                class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors duration-200"
               >
                 Save Changes
               </button>
@@ -693,7 +688,7 @@
         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
         @click.self="closeCollectionForm"
       >
-        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6">
+        <div class="bg-white rounded-3xl shadow-xl max-w-2xl w-full p-6">
           <h2 class="text-2xl font-bold text-gray-900 mb-6">Create New Collection</h2>
           
           <form @submit.prevent="addCollection" class="space-y-4">
@@ -728,13 +723,13 @@
               <button
                 type="button"
                 @click="closeCollectionForm"
-                class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+                class="px-6 py-2.5 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors duration-200 font-medium"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors duration-200"
+                class="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition-colors duration-200"
               >
                 Create Collection
               </button>
