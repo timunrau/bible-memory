@@ -2,7 +2,7 @@
 
 ## Wishlist
 - [ ] Fuzzy typing: typing a letter near the correct letter should count as correct (for mobile use)
-- [ ] Two way sync with a webdav folder. Sync on every chagne of anything. 
+- [ ] Two way sync with a webdav folder. Sync on every change of anything. When I connect a blank copy of the app to a webdav folder that already has bible memory data in it, import everything.
 - [ ] Set bible version on the verse
 - [ ] Installable PWA
 
