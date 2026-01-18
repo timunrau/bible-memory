@@ -140,10 +140,8 @@
           autocorrect="off"
           autocapitalize="off"
           spellcheck="false"
-          class="w-full max-w-md mx-auto px-4 py-3 text-2xl text-center border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none uppercase tracking-widest"
-          placeholder="Type here..."
+          class="absolute opacity-0 w-0 h-0"
         />
-        <p class="text-sm text-gray-500 mt-2">Type the first letter of the next word</p>
       </div>
 
       <!-- Completion Modal for Memorization -->
@@ -276,10 +274,8 @@
           autocorrect="off"
           autocapitalize="off"
           spellcheck="false"
-          class="w-full max-w-md mx-auto px-4 py-3 text-2xl text-center border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none uppercase tracking-widest"
-          placeholder="Type here..."
+          class="absolute opacity-0 w-0 h-0"
         />
-        <p class="text-sm text-gray-500 mt-2">Type the first letter of the next word</p>
       </div>
 
       <!-- Completion Modal for Review -->
