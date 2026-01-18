@@ -9,9 +9,27 @@ services:
     ports:
       - "1234:80"
     restart: unless-stopped
+    depends_on:
+      - webdav-proxy
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  webdav-proxy:
+    build:
+      context: .
+      dockerfile: Dockerfile.proxy
+    container_name: bible-memory-proxy
+    restart: unless-stopped
+    environment:
+      - PROXY_PORT=3001
+      - NEXTCLOUD_URL=${NEXTCLOUD_URL:-}
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

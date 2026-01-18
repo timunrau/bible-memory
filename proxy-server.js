@@ -26,8 +26,8 @@ app.get('/health', (req, res) => {
 // The webdav client will make requests to paths like /remote.php/webdav/...
 // We forward these to the configured Nextcloud URL
 app.use((req, res, next) => {
-  // Get target URL from environment or query parameter
-  let targetUrl = NEXTCLOUD_URL || req.query.target
+  // Get target URL from environment, query parameter, or custom header
+  let targetUrl = NEXTCLOUD_URL || req.query.target || req.headers['x-webdav-target']
   
   if (!targetUrl) {
     return res.status(400).json({ 

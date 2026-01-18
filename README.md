@@ -13,7 +13,7 @@
 - [x] backup and import
 - [x] Two way sync with a webdav folder. Sync on every change of anything. When I connect a blank copy of the app to a webdav folder that already has bible memory data in it, import everything.
 - [x] Set bible version on the verse
-- [ ] Installable PWA
+- [x] Installable PWA
 
 
 A Progressive Web App for memorizing Bible verses, built with Vue.js and Tailwind CSS.

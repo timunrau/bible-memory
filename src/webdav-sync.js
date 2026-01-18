@@ -45,6 +45,16 @@ function saveSyncState(state) {
 }
 
 /**
+ * Detect if we're in production
+ */
+function isProduction() {
+  if (typeof window === 'undefined') return false
+  const hostname = window.location.hostname
+  // Check if we're on the production domain
+  return hostname === 'bible-memory.unrau.xyz' || hostname.includes('unrau.xyz')
+}
+
+/**
  * Create WebDAV client from settings
  */
 function createWebDAVClient(settings) {
@@ -54,23 +64,46 @@ function createWebDAVClient(settings) {
 
   let baseUrl = settings.url.trim()
   let proxyUrl = null
+  let customHeaders = {}
   
-  // If using proxy, extract the Nextcloud path and use proxy as base
-  if (settings.useProxy) {
-    proxyUrl = (settings.proxyUrl || 'http://localhost:3001').trim()
+  // Auto-detect production and use proxy, or use explicit proxy setting
+  const shouldUseProxy = settings.useProxy || (isProduction() && settings.useProxy !== false)
+  
+  if (shouldUseProxy) {
+    // In production, use the nginx proxy endpoint
+    if (isProduction()) {
+      proxyUrl = '/api/webdav'
+    } else {
+      // In development, use the explicit proxy URL or default
+      proxyUrl = (settings.proxyUrl || 'http://localhost:3001').trim()
+    }
     
     // Parse the Nextcloud URL to get the path
     try {
       const nextcloudUrl = new URL(baseUrl)
       const nextcloudPath = nextcloudUrl.pathname
       
-      // Use proxy URL as base, but we need to prepend the Nextcloud path to all requests
-      // The webdav library will append paths to the base URL, so we need to include
-      // the Nextcloud path in the base URL when using proxy
-      baseUrl = proxyUrl + nextcloudPath
+      // For production proxy, pass the target URL via custom header
+      // and use the proxy endpoint with the Nextcloud path
+      if (isProduction()) {
+        // Store the original target URL in a header for the proxy to use
+        customHeaders['X-WebDAV-Target'] = baseUrl
+        // Use proxy endpoint with the Nextcloud path
+        baseUrl = proxyUrl + nextcloudPath
+      } else {
+        // Use proxy URL as base, but we need to prepend the Nextcloud path to all requests
+        // The webdav library will append paths to the base URL, so we need to include
+        // the Nextcloud path in the base URL when using proxy
+        baseUrl = proxyUrl + nextcloudPath
+      }
     } catch (e) {
       // If URL parsing fails, just use proxy URL
-      baseUrl = proxyUrl
+      if (isProduction()) {
+        customHeaders['X-WebDAV-Target'] = baseUrl
+        baseUrl = proxyUrl
+      } else {
+        baseUrl = proxyUrl
+      }
     }
   }
 
@@ -88,10 +121,18 @@ function createWebDAVClient(settings) {
     }
   }
 
-  return createClient(path, {
+  // Build client options
+  const clientOptions = {
     username: settings.username,
     password: settings.password
-  })
+  }
+  
+  // Add custom headers if using proxy in production
+  if (Object.keys(customHeaders).length > 0) {
+    clientOptions.headers = customHeaders
+  }
+
+  return createClient(path, clientOptions)
 }
 
 /**
