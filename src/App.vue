@@ -417,9 +417,17 @@
           ]"
         >
           <div class="flex items-start justify-between mb-3">
-            <h3 class="text-lg font-semibold text-gray-800 flex-1">
-              {{ verse.reference }}
-            </h3>
+            <div class="flex-1 flex items-center gap-2">
+              <h3 class="text-lg font-semibold text-gray-800">
+                {{ verse.reference }}
+              </h3>
+              <span
+                v-if="verse.bibleVersion"
+                class="px-2 py-0.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-md uppercase tracking-wider"
+              >
+                {{ verse.bibleVersion }}
+              </span>
+            </div>
             <div class="flex items-center gap-1">
               <button
                 @click.stop="startEditVerse(verse)"
@@ -549,6 +557,21 @@
             </div>
 
             <div>
+              <label for="bible-version" class="block text-sm font-medium text-gray-700 mb-2">
+                Bible Version
+              </label>
+              <input
+                id="bible-version"
+                v-model="newVerse.bibleVersion"
+                type="text"
+                placeholder="e.g., BSB, NIV, ESV"
+                maxlength="10"
+                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none uppercase tracking-wider"
+                style="text-transform: uppercase;"
+              />
+            </div>
+
+            <div>
               <label for="content" class="block text-sm font-medium text-gray-700 mb-2">
                 Verse Content
               </label>
@@ -562,7 +585,7 @@
               ></textarea>
             </div>
 
-            <div>
+            <div v-if="!currentCollectionId || currentCollectionId === 'master-list'">
               <label class="block text-sm font-medium text-gray-700 mb-2">
                 Collections
               </label>
@@ -606,7 +629,7 @@
       <!-- Edit Verse Form Modal -->
       <div
         v-if="showEditVerseForm"
-        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+        class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
         @click.self="closeEditVerseForm"
       >
         <div class="bg-white rounded-3xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
@@ -624,6 +647,21 @@
                 placeholder="e.g., John 3:16"
                 required
                 class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+            </div>
+
+            <div>
+              <label for="edit-bible-version" class="block text-sm font-medium text-gray-700 mb-2">
+                Bible Version
+              </label>
+              <input
+                id="edit-bible-version"
+                v-model="editingVerse.bibleVersion"
+                type="text"
+                placeholder="e.g., BSB, NIV, ESV"
+                maxlength="10"
+                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none uppercase tracking-wider"
+                style="text-transform: uppercase;"
               />
             </div>
 
@@ -763,6 +801,7 @@ export default {
     const newVerse = ref({
       reference: '',
       content: '',
+      bibleVersion: '',
       collectionIds: []
     })
 
@@ -959,6 +998,10 @@ export default {
           if (!verse.hasOwnProperty('collectionIds')) {
             verse.collectionIds = []
           }
+          // Add bibleVersion if missing
+          if (!verse.hasOwnProperty('bibleVersion')) {
+            verse.bibleVersion = ''
+          }
           return verse
         })
         saveVerses() // Save migrated data
@@ -1139,10 +1182,21 @@ export default {
     const addVerse = () => {
       if (newVerse.value.reference && newVerse.value.content) {
         const now = new Date().toISOString()
+        
+        // If inside a collection (and not master-list), automatically add to that collection
+        let collectionIds = newVerse.value.collectionIds || []
+        if (currentCollectionId.value && currentCollectionId.value !== 'master-list') {
+          // Ensure the current collection is included
+          if (!collectionIds.includes(currentCollectionId.value)) {
+            collectionIds = [...collectionIds, currentCollectionId.value]
+          }
+        }
+        
         const verse = {
           id: Date.now().toString(),
           reference: newVerse.value.reference.trim(),
           content: newVerse.value.content.trim(),
+          bibleVersion: newVerse.value.bibleVersion ? newVerse.value.bibleVersion.trim().toUpperCase() : '',
           createdAt: now,
           memorizationStatus: 'unmemorized', // unmemorized, learned, memorized, mastered
           reviewCount: 0,
@@ -1151,7 +1205,7 @@ export default {
           easeFactor: 2.5, // Default ease factor (SM-2 standard)
           interval: 0,
           reviewHistory: [],
-          collectionIds: newVerse.value.collectionIds || []
+          collectionIds: collectionIds
         }
         verses.value.unshift(verse)
         saveVerses()
@@ -1165,6 +1219,7 @@ export default {
       newVerse.value = {
         reference: '',
         content: '',
+        bibleVersion: '',
         collectionIds: []
       }
     }
@@ -1266,6 +1321,7 @@ export default {
         if (verse) {
           verse.reference = editingVerse.value.reference.trim()
           verse.content = editingVerse.value.content.trim()
+          verse.bibleVersion = editingVerse.value.bibleVersion ? editingVerse.value.bibleVersion.trim().toUpperCase() : ''
           verse.collectionIds = editingVerse.value.collectionIds || []
           saveVerses()
           closeEditVerseForm()
