@@ -601,7 +601,7 @@
       <!-- Collection View -->
       <div v-if="currentCollectionId" class="py-4">
         <!-- Verse List -->
-        <div class="space-y-3">
+        <div class="space-y-3 overflow-y-auto max-h-[calc(100vh-5rem)]">
         <div
           v-for="verse in sortedVerses"
           :key="verse.id"
