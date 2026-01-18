@@ -92,20 +92,11 @@ export function markCollectionDeleted(collectionId) {
 
 /**
  * Clear deleted IDs that are no longer in remote data (they've been synced)
+ * Note: This is now handled in mergeData, but keeping for backward compatibility
  */
 function clearSyncedDeletions(remoteVerses, remoteCollections) {
-  const deletedVerses = getDeletedVerses()
-  const deletedCollections = getDeletedCollections()
-  
-  const remoteVerseIds = new Set((remoteVerses || []).map(v => v.id))
-  const remoteCollectionIds = new Set((remoteCollections || []).map(c => c.id))
-  
-  // Remove deleted IDs that are no longer in remote data
-  const remainingDeletedVerses = deletedVerses.filter(id => remoteVerseIds.has(id))
-  const remainingDeletedCollections = deletedCollections.filter(id => remoteCollectionIds.has(id))
-  
-  localStorage.setItem(DELETED_VERSES_KEY, JSON.stringify(remainingDeletedVerses))
-  localStorage.setItem(DELETED_COLLECTIONS_KEY, JSON.stringify(remainingDeletedCollections))
+  // Deletion cleanup is now handled in mergeData
+  // This function is kept for backward compatibility but does nothing
 }
 
 /**
@@ -294,10 +285,16 @@ export async function uploadToWebDAV(verses, collections) {
     
     console.log(`[WebDAV] Uploading data to: ${filePath}`)
     
+    // Get deleted IDs to include in sync data
+    const deletedVerses = getDeletedVerses()
+    const deletedCollections = getDeletedCollections()
+    
     // Prepare data to upload
     const data = {
       verses: verses || [],
       collections: collections || [],
+      deletedVerses: deletedVerses || [],
+      deletedCollections: deletedCollections || [],
       syncedAt: new Date().toISOString()
     }
     
@@ -344,7 +341,7 @@ export async function uploadToWebDAV(verses, collections) {
  * Strategy: 
  * - Items with same ID: keep the one with more recent lastModified or lastReviewed
  * - New items: add both
- * - Deleted items: exclude items that were deleted locally
+ * - Deleted items: merge deletion lists from remote and local, exclude deleted items
  */
 function mergeData(localVerses, localCollections, remoteData) {
   if (!remoteData || (!remoteData.verses && !remoteData.collections)) {
@@ -358,37 +355,43 @@ function mergeData(localVerses, localCollections, remoteData) {
   const remoteVerses = remoteData.verses || []
   const remoteCollections = remoteData.collections || []
   
-  // Get deleted IDs to exclude from merge
-  let deletedVerseIds = new Set(getDeletedVerses())
-  let deletedCollectionIds = new Set(getDeletedCollections())
+  // Merge deletion lists from remote and local
+  const remoteDeletedVerses = new Set(remoteData.deletedVerses || [])
+  const remoteDeletedCollections = new Set(remoteData.deletedCollections || [])
+  const localDeletedVerses = new Set(getDeletedVerses())
+  const localDeletedCollections = new Set(getDeletedCollections())
+  
+  // Combine deletions from both sources
+  const allDeletedVerseIds = new Set([...remoteDeletedVerses, ...localDeletedVerses])
+  const allDeletedCollectionIds = new Set([...remoteDeletedCollections, ...localDeletedCollections])
   
   // Remove from deleted list if item exists locally (was re-added)
   const localVerseIds = new Set((localVerses || []).map(v => v.id))
   const localCollectionIds = new Set((localCollections || []).map(c => c.id))
   
-  deletedVerseIds = new Set([...deletedVerseIds].filter(id => !localVerseIds.has(id)))
-  deletedCollectionIds = new Set([...deletedCollectionIds].filter(id => !localCollectionIds.has(id)))
+  const finalDeletedVerseIds = new Set([...allDeletedVerseIds].filter(id => !localVerseIds.has(id)))
+  const finalDeletedCollectionIds = new Set([...allDeletedCollectionIds].filter(id => !localCollectionIds.has(id)))
   
-  // Update localStorage with cleaned deletion lists
-  if (deletedVerseIds.size !== getDeletedVerses().length) {
-    localStorage.setItem(DELETED_VERSES_KEY, JSON.stringify([...deletedVerseIds]))
-  }
-  if (deletedCollectionIds.size !== getDeletedCollections().length) {
-    localStorage.setItem(DELETED_COLLECTIONS_KEY, JSON.stringify([...deletedCollectionIds]))
-  }
+  // Update localStorage with merged deletion lists
+  localStorage.setItem(DELETED_VERSES_KEY, JSON.stringify([...finalDeletedVerseIds]))
+  localStorage.setItem(DELETED_COLLECTIONS_KEY, JSON.stringify([...finalDeletedCollectionIds]))
 
   // Merge verses
   const verseMap = new Map()
   
-  // Add all local verses
+  // Add all local verses (excluding deleted ones)
   ;(localVerses || []).forEach(verse => {
+    // Skip if this verse was deleted (locally or remotely)
+    if (finalDeletedVerseIds.has(verse.id)) {
+      return
+    }
     verseMap.set(verse.id, { ...verse, source: 'local' })
   })
   
   // Merge remote verses (excluding deleted ones)
   remoteVerses.forEach(verse => {
-    // Skip if this verse was deleted locally
-    if (deletedVerseIds.has(verse.id)) {
+    // Skip if this verse was deleted (locally or remotely)
+    if (finalDeletedVerseIds.has(verse.id)) {
       return
     }
     
@@ -422,15 +425,19 @@ function mergeData(localVerses, localCollections, remoteData) {
   // Merge collections
   const collectionMap = new Map()
   
-  // Add all local collections
+  // Add all local collections (excluding deleted ones)
   ;(localCollections || []).forEach(collection => {
+    // Skip if this collection was deleted (locally or remotely)
+    if (finalDeletedCollectionIds.has(collection.id)) {
+      return
+    }
     collectionMap.set(collection.id, { ...collection, source: 'local' })
   })
   
   // Merge remote collections (excluding deleted ones)
   remoteCollections.forEach(collection => {
-    // Skip if this collection was deleted locally
-    if (deletedCollectionIds.has(collection.id)) {
+    // Skip if this collection was deleted (locally or remotely)
+    if (finalDeletedCollectionIds.has(collection.id)) {
       return
     }
     
@@ -489,8 +496,26 @@ export async function syncData(localVerses, localCollections) {
       }
     }
     
-    // Merge data
-    const merged = mergeData(localVerses, localCollections, remoteData)
+    // Apply remote deletions to local data before merging
+    // This ensures that items deleted on other devices are removed locally
+    const remoteDeletedVerses = new Set(remoteData.deletedVerses || [])
+    const remoteDeletedCollections = new Set(remoteData.deletedCollections || [])
+    
+    // Filter out locally deleted items from local arrays
+    let cleanedLocalVerses = (localVerses || []).filter(v => !remoteDeletedVerses.has(v.id))
+    let cleanedLocalCollections = (localCollections || []).filter(c => !remoteDeletedCollections.has(c.id))
+    
+    // Remove deleted collection IDs from verses
+    cleanedLocalVerses = cleanedLocalVerses.map(verse => {
+      if (verse.collectionIds && verse.collectionIds.length > 0) {
+        const cleanedCollectionIds = verse.collectionIds.filter(id => !remoteDeletedCollections.has(id))
+        return { ...verse, collectionIds: cleanedCollectionIds }
+      }
+      return verse
+    })
+    
+    // Merge data (using cleaned local data)
+    const merged = mergeData(cleanedLocalVerses, cleanedLocalCollections, remoteData)
     
     // Upload merged data
     await uploadToWebDAV(merged.verses, merged.collections)
