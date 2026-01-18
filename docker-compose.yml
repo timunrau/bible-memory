@@ -26,7 +26,7 @@ services:
     restart: unless-stopped
     environment:
       - PROXY_PORT=3001
-      - NEXTCLOUD_URL="https://bible-memory.unrau.xyz/remote.php/webdav"
+      - NEXTCLOUD_URL="https://nc.unrau.xyz/remote.php/dav/files/timu"
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/health"]
       interval: 30s

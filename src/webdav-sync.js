@@ -66,8 +66,13 @@ function createWebDAVClient(settings) {
   let proxyUrl = null
   let customHeaders = {}
   
-  // Auto-detect production and use proxy, or use explicit proxy setting
-  const shouldUseProxy = settings.useProxy || (isProduction() && settings.useProxy !== false)
+  // In production, always use the proxy to avoid CORS issues
+  // In development, use proxy if explicitly enabled
+  const shouldUseProxy = isProduction() || settings.useProxy
+  
+  console.log('[WebDAV] isProduction:', isProduction())
+  console.log('[WebDAV] shouldUseProxy:', shouldUseProxy)
+  console.log('[WebDAV] Original baseUrl:', baseUrl)
   
   if (shouldUseProxy) {
     // In production, use the nginx proxy endpoint
@@ -87,22 +92,29 @@ function createWebDAVClient(settings) {
       // and use the proxy endpoint with the Nextcloud path
       if (isProduction()) {
         // Store the original target URL in a header for the proxy to use
-        customHeaders['X-WebDAV-Target'] = baseUrl
+        const originalTargetUrl = baseUrl
+        customHeaders['X-WebDAV-Target'] = originalTargetUrl
         // Use proxy endpoint with the Nextcloud path
         baseUrl = proxyUrl + nextcloudPath
+        console.log('[WebDAV] Production mode - using proxy:', proxyUrl)
+        console.log('[WebDAV] Setting X-WebDAV-Target header to:', originalTargetUrl)
+        console.log('[WebDAV] Final baseUrl for client:', baseUrl)
       } else {
         // Use proxy URL as base, but we need to prepend the Nextcloud path to all requests
         // The webdav library will append paths to the base URL, so we need to include
         // the Nextcloud path in the base URL when using proxy
         baseUrl = proxyUrl + nextcloudPath
+        console.log('[WebDAV] Development mode - using proxy:', baseUrl)
       }
     } catch (e) {
       // If URL parsing fails, just use proxy URL
       if (isProduction()) {
         customHeaders['X-WebDAV-Target'] = baseUrl
         baseUrl = proxyUrl
+        console.log('[WebDAV] URL parse error in production, using proxy:', baseUrl)
       } else {
         baseUrl = proxyUrl
+        console.log('[WebDAV] URL parse error, using proxy:', baseUrl)
       }
     }
   }

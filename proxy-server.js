@@ -26,12 +26,20 @@ app.get('/health', (req, res) => {
 // The webdav client will make requests to paths like /remote.php/webdav/...
 // We forward these to the configured Nextcloud URL
 app.use((req, res, next) => {
-  // Get target URL from environment, query parameter, or custom header
-  let targetUrl = NEXTCLOUD_URL || req.query.target || req.headers['x-webdav-target']
+  // Get target URL from custom header (per-request, highest priority), query parameter, or environment variable
+  const headerTarget = req.headers['x-webdav-target']
+  let targetUrl = (headerTarget && headerTarget.trim()) || req.query.target || NEXTCLOUD_URL
   
-  if (!targetUrl) {
+  // Debug logging
+  console.log(`[Proxy] Request: ${req.method} ${req.path}`)
+  console.log(`[Proxy] X-WebDAV-Target header: ${headerTarget || 'not set'}`)
+  console.log(`[Proxy] Query target: ${req.query.target || 'not set'}`)
+  console.log(`[Proxy] Env NEXTCLOUD_URL: ${NEXTCLOUD_URL || 'not set'}`)
+  console.log(`[Proxy] Using target URL: ${targetUrl || 'not configured'}`)
+  
+  if (!targetUrl || !targetUrl.trim()) {
     return res.status(400).json({ 
-      error: 'Nextcloud URL not configured. Set NEXTCLOUD_URL environment variable or use ?target=<url>',
+      error: 'Nextcloud URL not configured. Set NEXTCLOUD_URL environment variable, use ?target=<url>, or send X-WebDAV-Target header',
       instructions: 'Example: NEXTCLOUD_URL=https://your-nextcloud.com/remote.php/webdav npm run dev:proxy'
     })
   }
@@ -68,10 +76,10 @@ app.use((req, res, next) => {
     targetPath = normalizedTargetPath + (requestPath.startsWith('/') ? '' : '/') + requestPath
   }
   
-  // Debug logging (can be removed in production)
-  console.log(`[Proxy] Request: ${req.method} ${req.path}`)
+  // Debug logging
   console.log(`[Proxy] Target origin: ${target.origin}`)
   console.log(`[Proxy] Target pathname: ${target.pathname}`)
+  console.log(`[Proxy] Request path: ${requestPath}`)
   console.log(`[Proxy] Forwarding to: ${target.origin}${targetPath}`)
 
   // Create proxy middleware
