@@ -1511,10 +1511,10 @@ export default {
         // Reset ease factor slightly but don't go below 1.3
         newEF = Math.max(1.3, newEF * 0.8)
       } else {
-        // Graduated phase: use ease factor to calculate interval with much shorter intervals
+        // Graduated phase: use ease factor to calculate interval
         if (verse.reviewCount === 0) {
-          // First successful review: 4 hours
-          interval = 4 / 24 // 4 hours in days
+          // First successful review: 1 day
+          interval = 1
         } else if (verse.reviewCount === 1) {
           // Second review: 1 day
           interval = 1
@@ -1522,11 +1522,11 @@ export default {
           // Third review: 2 days
           interval = 2
         } else if (verse.reviewCount === 3) {
-          // Fourth review: 4 days
-          interval = 4
+          // Fourth review: 3 days
+          interval = 3
         } else if (verse.reviewCount === 4) {
-          // Fifth review: 7 days
-          interval = 7
+          // Fifth review: 4 days
+          interval = 4
         } else {
           // Subsequent reviews: previous interval * ease factor
           const previousInterval = verse.interval || 1
