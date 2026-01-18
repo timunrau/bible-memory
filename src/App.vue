@@ -719,16 +719,66 @@
       </div>
     </div>
 
-    <!-- Floating Action Button -->
-    <button
-      @click="currentCollectionId ? showForm = true : showCollectionForm = true"
-      class="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-30"
-      :title="currentCollectionId ? 'Add new verse' : 'Add new collection'"
-    >
-      <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-      </svg>
-    </button>
+    <!-- Floating Action Button with Menu -->
+    <div class="fixed bottom-6 right-6 z-30">
+      <!-- FAB Menu (only shown on collections screen) -->
+      <transition-group
+        v-if="!currentCollectionId && fabMenuOpen"
+        name="fab-menu"
+        tag="div"
+        class="absolute bottom-20 right-0 mb-2 flex flex-col gap-2"
+      >
+        <!-- New Verse Option -->
+        <button
+          key="verse"
+          @click="openNewVerse"
+          class="bg-white text-gray-900 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-3 px-4 py-3 min-w-[160px] active:bg-gray-50"
+          style="box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);"
+        >
+          <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+          </div>
+          <span class="text-sm font-medium">New Verse</span>
+        </button>
+        
+        <!-- New Collection Option -->
+        <button
+          key="collection"
+          @click="openNewCollection"
+          class="bg-white text-gray-900 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-3 px-4 py-3 min-w-[160px] active:bg-gray-50"
+          style="box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);"
+        >
+          <div class="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+          </div>
+          <span class="text-sm font-medium">New Collection</span>
+        </button>
+      </transition-group>
+
+      <!-- Main FAB Button -->
+      <button
+        @click="handleFabClick"
+        class="w-14 h-14 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center"
+        :class="{ 'rotate-45': !currentCollectionId && fabMenuOpen }"
+        :title="currentCollectionId ? 'Add new verse' : 'Add new item'"
+        style="box-shadow: 0 6px 10px 0 rgba(0, 0, 0, 0.14), 0 1px 18px 0 rgba(0, 0, 0, 0.12), 0 3px 5px -1px rgba(0, 0, 0, 0.2);"
+      >
+        <svg class="w-7 h-7 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Backdrop to close menu when clicking outside -->
+    <div
+      v-if="!currentCollectionId && fabMenuOpen"
+      @click="fabMenuOpen = false"
+      class="fixed inset-0 z-20"
+    ></div>
   </div>
 
       <!-- Add Verse Form Modal -->
@@ -1152,6 +1202,7 @@ export default {
     const syncing = ref(false)
     const syncSuccess = ref(false)
     const syncError = ref(null)
+    const fabMenuOpen = ref(false)
 
     const newVerse = ref({
       reference: '',
@@ -1658,6 +1709,7 @@ export default {
         bibleVersion: '',
         collectionIds: []
       }
+      fabMenuOpen.value = false
     }
 
     // Add new collection
@@ -1682,6 +1734,30 @@ export default {
         name: '',
         description: ''
       }
+      fabMenuOpen.value = false
+    }
+
+    // Handle FAB click
+    const handleFabClick = () => {
+      if (currentCollectionId.value) {
+        // If viewing a collection, directly open verse form
+        showForm.value = true
+      } else {
+        // If on collections screen, toggle menu
+        fabMenuOpen.value = !fabMenuOpen.value
+      }
+    }
+
+    // Open new verse from FAB menu
+    const openNewVerse = () => {
+      fabMenuOpen.value = false
+      showForm.value = true
+    }
+
+    // Open new collection from FAB menu
+    const openNewCollection = () => {
+      fabMenuOpen.value = false
+      showCollectionForm.value = true
     }
 
     // Delete collection
@@ -2449,6 +2525,10 @@ export default {
       newCollection,
       addCollection,
       closeCollectionForm,
+      handleFabClick,
+      openNewVerse,
+      openNewCollection,
+      fabMenuOpen,
       deleteCollection,
       getCollectionName,
       getCollectionVerseCount,
