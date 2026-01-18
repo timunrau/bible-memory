@@ -16,9 +16,51 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 class="text-xl font-semibold text-gray-900 flex-1 text-center mr-11">
+        <h1 class="text-xl font-semibold text-gray-900 flex-1 text-center mr-20">
           {{ memorizingVerse.reference }}
         </h1>
+        <div class="flex items-center gap-1 ml-1">
+          <!-- Sync Button -->
+          <button
+            @click="manualSync"
+            :disabled="syncing"
+            class="p-2 text-gray-700 active:bg-gray-100 rounded-full transition-colors relative"
+            :class="{ 'opacity-50 cursor-not-allowed': syncing }"
+            :title="syncing ? 'Syncing...' : 'Sync with WebDAV'"
+          >
+            <!-- Spinning sync icon -->
+            <svg 
+              v-if="syncing" 
+              class="w-6 h-6 animate-spin" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+              style="transform-origin: center;"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <!-- Success checkmark -->
+            <svg 
+              v-else-if="syncSuccess" 
+              class="w-6 h-6 text-green-600" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <!-- Default sync icon -->
+            <svg 
+              v-else 
+              class="w-6 h-6" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+        </div>
       </div>
     </header>
 
@@ -212,9 +254,51 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 class="text-xl font-semibold text-gray-900 flex-1 text-center mr-11">
+        <h1 class="text-xl font-semibold text-gray-900 flex-1 text-center mr-20">
           {{ reviewingVerse.reference }}
         </h1>
+        <div class="flex items-center gap-1 ml-1">
+          <!-- Sync Button -->
+          <button
+            @click="manualSync"
+            :disabled="syncing"
+            class="p-2 text-gray-700 active:bg-gray-100 rounded-full transition-colors relative"
+            :class="{ 'opacity-50 cursor-not-allowed': syncing }"
+            :title="syncing ? 'Syncing...' : 'Sync with WebDAV'"
+          >
+            <!-- Spinning sync icon -->
+            <svg 
+              v-if="syncing" 
+              class="w-6 h-6 animate-spin" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+              style="transform-origin: center;"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <!-- Success checkmark -->
+            <svg 
+              v-else-if="syncSuccess" 
+              class="w-6 h-6 text-green-600" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <!-- Default sync icon -->
+            <svg 
+              v-else 
+              class="w-6 h-6" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+        </div>
       </div>
     </header>
 
@@ -342,22 +426,88 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 class="text-xl font-semibold text-gray-900 flex-1 text-center" :class="{ 'mr-11': currentCollectionId || !currentCollectionId }">
+        <h1 class="text-xl font-semibold text-gray-900 flex-1 text-center" :class="{ 'mr-20': !currentCollectionId || currentCollectionId }">
           {{ currentCollectionId ? getCollectionName(currentCollectionId) : 'Collections' }}
         </h1>
+        <div class="flex items-center gap-1 ml-1">
+          <!-- Sync Button -->
+          <button
+            @click="manualSync"
+            :disabled="syncing"
+            class="p-2 text-gray-700 active:bg-gray-100 rounded-full transition-colors relative"
+            :class="{ 'opacity-50 cursor-not-allowed': syncing }"
+            :title="syncing ? 'Syncing...' : 'Sync with WebDAV'"
+          >
+            <!-- Spinning sync icon -->
+            <svg 
+              v-if="syncing" 
+              class="w-6 h-6 animate-spin" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+              style="transform-origin: center;"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <!-- Success checkmark -->
+            <svg 
+              v-else-if="syncSuccess" 
+              class="w-6 h-6 text-green-600" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <!-- Default sync icon -->
+            <svg 
+              v-else 
+              class="w-6 h-6" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+          <!-- Settings Button -->
+          <button
+            @click="showSettings = true"
+            class="p-2 text-gray-700 active:bg-gray-100 rounded-full transition-colors"
+            title="Settings"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Sync Error Toast -->
+    <div
+      v-if="syncError"
+      class="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 bg-red-50 border border-red-200 rounded-lg shadow-lg p-4 max-w-md mx-4"
+    >
+      <div class="flex items-start gap-3">
+        <svg class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <div class="flex-1">
+          <p class="text-sm font-medium text-red-800">Sync Failed</p>
+          <p class="text-sm text-red-700 mt-1">{{ syncError }}</p>
+        </div>
         <button
-          v-if="!currentCollectionId"
-          @click="showSettings = true"
-          class="p-2 -mr-2 ml-1 text-gray-700 active:bg-gray-100 rounded-full transition-colors"
-          title="Settings"
+          @click="syncError = null"
+          class="text-red-600 hover:text-red-800 flex-shrink-0"
         >
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
-    </header>
+    </div>
 
     <!-- Content Area with top padding for fixed header -->
     <div class="pt-16 pb-24 px-4">
@@ -1000,6 +1150,8 @@ export default {
     const testingConnection = ref(false)
     const syncStatus = ref(null)
     const syncing = ref(false)
+    const syncSuccess = ref(false)
+    const syncError = ref(null)
 
     const newVerse = ref({
       reference: '',
@@ -2059,16 +2211,23 @@ export default {
     }
 
     // WebDAV sync functions
-    const triggerSync = async () => {
+    const triggerSync = async (showFeedback = false) => {
       // Don't sync if already syncing or if WebDAV not configured
       if (syncing.value) return
       
       const settings = getWebDAVSettings()
       if (!settings || !settings.url || !settings.username || !settings.password) {
+        if (showFeedback) {
+          syncError.value = 'WebDAV not configured. Please configure it in settings.'
+          setTimeout(() => { syncError.value = null }, 5000)
+        }
         return
       }
       
       syncing.value = true
+      syncSuccess.value = false
+      syncError.value = null
+      
       try {
         const result = await syncData(verses.value, collections.value)
         if (result.success) {
@@ -2081,16 +2240,39 @@ export default {
             collections.value = result.collections
             localStorage.setItem(COLLECTIONS_KEY, JSON.stringify(collections.value))
           }
+          
+          if (showFeedback) {
+            // Show success feedback
+            syncSuccess.value = true
+            setTimeout(() => {
+              syncSuccess.value = false
+            }, 2000)
+          }
         } else {
-          // Sync failed, but don't show error to user for background syncs
-          console.warn('Background sync failed:', result.error)
+          // Sync failed
+          const errorMsg = result.error || 'Sync failed'
+          console.warn('Sync failed:', errorMsg)
+          if (showFeedback) {
+            syncError.value = errorMsg
+            setTimeout(() => { syncError.value = null }, 5000)
+          }
         }
       } catch (error) {
-        // Sync failed, but don't break the app
+        // Sync failed
+        const errorMsg = error.message || 'Sync error occurred'
         console.error('Sync error:', error)
+        if (showFeedback) {
+          syncError.value = errorMsg
+          setTimeout(() => { syncError.value = null }, 5000)
+        }
       } finally {
         syncing.value = false
       }
+    }
+
+    // Manual sync (with user feedback)
+    const manualSync = () => {
+      triggerSync(true)
     }
 
     // Load WebDAV settings
@@ -2149,9 +2331,14 @@ export default {
         message: 'Settings saved successfully!'
       }
 
-      // Trigger initial sync after saving settings
+      // Close the modal after a brief delay to show success message
       setTimeout(() => {
-        triggerSync()
+        closeSettings()
+      }, 1000)
+
+      // Trigger initial sync after saving settings (without user feedback since modal is closing)
+      setTimeout(() => {
+        triggerSync(false)
       }, 500)
     }
 
@@ -2278,7 +2465,11 @@ export default {
       testWebDAVConnection,
       closeSettings,
       testingConnection,
-      syncStatus
+      syncStatus,
+      manualSync,
+      syncSuccess,
+      syncError,
+      syncing
     }
   }
 }

@@ -25,3 +25,18 @@ body {
     height: 100dvh;
   }
 }
+
+/* Ensure spin animation works */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite !important;
+  transform-origin: center;
+}
