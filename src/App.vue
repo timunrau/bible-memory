@@ -721,9 +721,9 @@
 
     <!-- Floating Action Button with Menu -->
     <div class="fixed bottom-6 right-6 z-30">
-      <!-- FAB Menu (only shown on collections screen) -->
+      <!-- FAB Menu (shown on collections screen and inside collections) -->
       <transition-group
-        v-if="!currentCollectionId && fabMenuOpen"
+        v-if="fabMenuOpen"
         name="fab-menu"
         tag="div"
         class="absolute bottom-20 right-0 mb-2 flex flex-col gap-2"
@@ -743,8 +743,9 @@
           <span class="text-sm font-medium">New Verse</span>
         </button>
         
-        <!-- New Collection Option -->
+        <!-- New Collection Option (only on collections screen) -->
         <button
+          v-if="!currentCollectionId"
           key="collection"
           @click="openNewCollection"
           class="bg-white text-gray-900 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-3 px-4 py-3 min-w-[160px] active:bg-gray-50"
@@ -757,13 +758,29 @@
           </div>
           <span class="text-sm font-medium">New Collection</span>
         </button>
+        
+        <!-- Import CSV Option (only inside collections/master list) -->
+        <button
+          v-if="currentCollectionId"
+          key="import"
+          @click="openImportCSV"
+          class="bg-white text-gray-900 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-3 px-4 py-3 min-w-[160px] active:bg-gray-50"
+          style="box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);"
+        >
+          <div class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+          </div>
+          <span class="text-sm font-medium">Import CSV</span>
+        </button>
       </transition-group>
 
       <!-- Main FAB Button -->
       <button
         @click="handleFabClick"
         class="w-14 h-14 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center"
-        :class="{ 'rotate-45': !currentCollectionId && fabMenuOpen }"
+        :class="{ 'rotate-45': fabMenuOpen }"
         :title="currentCollectionId ? 'Add new verse' : 'Add new item'"
         style="box-shadow: 0 6px 10px 0 rgba(0, 0, 0, 0.14), 0 1px 18px 0 rgba(0, 0, 0, 0.12), 0 3px 5px -1px rgba(0, 0, 0, 0.2);"
       >
@@ -775,7 +792,7 @@
 
     <!-- Backdrop to close menu when clicking outside -->
     <div
-      v-if="!currentCollectionId && fabMenuOpen"
+      v-if="fabMenuOpen"
       @click="fabMenuOpen = false"
       class="fixed inset-0 z-20"
     ></div>
@@ -1025,6 +1042,103 @@
         </div>
       </div>
 
+      <!-- CSV Import Modal -->
+      <div
+        v-if="showImportCSV"
+        class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+        @click.self="closeImportCSV"
+      >
+        <div class="bg-white rounded-3xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+          <h2 class="text-2xl font-bold text-gray-900 mb-6">Import Verses from CSV</h2>
+          
+          <div class="mb-6">
+            <p class="text-sm text-gray-600 mb-4">
+              Upload a CSV file with three columns: <strong>Reference</strong>, <strong>Content</strong>, and <strong>Version</strong>.
+            </p>
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <p class="text-xs text-blue-800 mb-2"><strong>CSV Format:</strong></p>
+              <pre class="text-xs text-blue-700 bg-blue-100 p-2 rounded overflow-x-auto">Reference,Content,Version
+John 3:16,"For God so loved the world...",NIV
+Romans 8:28,"And we know that in all things...",ESV</pre>
+            </div>
+            
+            <div class="mb-4">
+              <label for="csv-file" class="block text-sm font-medium text-gray-700 mb-2">
+                Select CSV File
+              </label>
+              <input
+                id="csv-file"
+                ref="csvFileInput"
+                type="file"
+                accept=".csv"
+                @change="handleCSVFileSelect"
+                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+            </div>
+            
+            <div v-if="csvImportStatus" class="p-3 rounded-lg mb-4" :class="csvImportStatus.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'">
+              <p class="text-sm whitespace-pre-line">{{ csvImportStatus.message }}</p>
+            </div>
+            
+            <div v-if="csvPreview.length > 0" class="mb-4">
+              <p class="text-sm font-medium text-gray-700 mb-2">Preview (first 5 rows):</p>
+              <div class="border border-gray-200 rounded-lg overflow-hidden">
+                <div class="overflow-x-auto max-h-64">
+                  <table class="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead class="bg-gray-50">
+                      <tr>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Reference</th>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Content</th>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Version</th>
+                      </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                      <tr v-for="(row, index) in csvPreview.slice(0, 5)" :key="index">
+                        <td class="px-3 py-2 text-gray-900">{{ row.reference || '' }}</td>
+                        <td class="px-3 py-2 text-gray-900">{{ (row.content || '').substring(0, 50) }}{{ (row.content || '').length > 50 ? '...' : '' }}</td>
+                        <td class="px-3 py-2 text-gray-900">{{ row.version || '' }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <p class="text-xs text-gray-500 mt-2">Total rows: {{ csvPreview.length }}</p>
+            </div>
+          </div>
+
+          <div class="flex justify-end space-x-3 pt-4">
+            <!-- Show Done button after successful import -->
+            <button
+              v-if="csvImportStatus && csvImportStatus.type === 'success'"
+              type="button"
+              @click="closeImportCSV"
+              class="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-semibold transition-colors duration-200"
+            >
+              Done
+            </button>
+            
+            <!-- Show Cancel and Import buttons before/during import -->
+            <template v-else>
+              <button
+                type="button"
+                @click="closeImportCSV"
+                class="px-6 py-2.5 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors duration-200 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                @click="importCSVVerses"
+                :disabled="csvPreview.length === 0 || importingCSV"
+                class="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-semibold transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {{ importingCSV ? 'Importing...' : `Import ${csvPreview.length} Verse${csvPreview.length !== 1 ? 's' : ''}` }}
+              </button>
+            </template>
+          </div>
+        </div>
+      </div>
+
       <!-- Settings Modal -->
       <div
         v-if="showSettings"
@@ -1189,6 +1303,7 @@ export default {
     const showCollectionForm = ref(false)
     const showEditVerseForm = ref(false)
     const showSettings = ref(false)
+    const showImportCSV = ref(false)
     const editingVerse = ref(null)
     const currentCollectionId = ref(null) // null = all verses, string = specific collection
     const reviewingVerse = ref(null)
@@ -1206,6 +1321,10 @@ export default {
     const syncSuccess = ref(false)
     const syncError = ref(null)
     const fabMenuOpen = ref(false)
+    const csvFileInput = ref(null)
+    const csvPreview = ref([])
+    const csvImportStatus = ref(null)
+    const importingCSV = ref(false)
 
     const newVerse = ref({
       reference: '',
@@ -1742,13 +1861,8 @@ export default {
 
     // Handle FAB click
     const handleFabClick = () => {
-      if (currentCollectionId.value) {
-        // If viewing a collection, directly open verse form
-        showForm.value = true
-      } else {
-        // If on collections screen, toggle menu
-        fabMenuOpen.value = !fabMenuOpen.value
-      }
+      // Toggle menu for both collections screen and inside collections
+      fabMenuOpen.value = !fabMenuOpen.value
     }
 
     // Open new verse from FAB menu
@@ -1761,6 +1875,226 @@ export default {
     const openNewCollection = () => {
       fabMenuOpen.value = false
       showCollectionForm.value = true
+    }
+
+    // Open CSV import modal
+    const openImportCSV = () => {
+      fabMenuOpen.value = false
+      showImportCSV.value = true
+      csvPreview.value = []
+      csvImportStatus.value = null
+    }
+
+    // Close CSV import modal
+    const closeImportCSV = () => {
+      showImportCSV.value = false
+      csvPreview.value = []
+      csvImportStatus.value = null
+      if (csvFileInput.value) {
+        csvFileInput.value.value = ''
+      }
+    }
+
+    // Parse CSV file
+    const parseCSV = (text) => {
+      const lines = text.split('\n').filter(line => line.trim())
+      if (lines.length === 0) return []
+      
+      // Parse header row
+      const headerLine = lines[0]
+      const headers = parseCSVLine(headerLine)
+      
+      // Normalize header names (case-insensitive, trim whitespace)
+      const normalizedHeaders = headers.map(h => h.trim().toLowerCase())
+      const referenceIndex = normalizedHeaders.findIndex(h => h === 'reference')
+      const contentIndex = normalizedHeaders.findIndex(h => h === 'content')
+      const versionIndex = normalizedHeaders.findIndex(h => h === 'version')
+      
+      if (referenceIndex === -1 || contentIndex === -1) {
+        throw new Error('CSV must have "Reference" and "Content" columns')
+      }
+      
+      // Parse data rows
+      const rows = []
+      for (let i = 1; i < lines.length; i++) {
+        const values = parseCSVLine(lines[i])
+        if (values.length === 0) continue
+        
+        const row = {
+          reference: values[referenceIndex]?.trim() || '',
+          content: values[contentIndex]?.trim() || '',
+          version: versionIndex !== -1 ? (values[versionIndex]?.trim() || '') : ''
+        }
+        
+        // Only add rows with reference and content
+        if (row.reference && row.content) {
+          rows.push(row)
+        }
+      }
+      
+      return rows
+    }
+
+    // Parse a single CSV line, handling quoted fields
+    const parseCSVLine = (line) => {
+      const result = []
+      let current = ''
+      let inQuotes = false
+      
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i]
+        const nextChar = line[i + 1]
+        
+        if (char === '"') {
+          if (inQuotes && nextChar === '"') {
+            // Escaped quote
+            current += '"'
+            i++ // Skip next quote
+          } else {
+            // Toggle quote state
+            inQuotes = !inQuotes
+          }
+        } else if (char === ',' && !inQuotes) {
+          // Field separator
+          result.push(current)
+          current = ''
+        } else {
+          current += char
+        }
+      }
+      
+      // Add last field
+      result.push(current)
+      return result
+    }
+
+    // Handle CSV file selection
+    const handleCSVFileSelect = (event) => {
+      const file = event.target.files[0]
+      if (!file) return
+      
+      csvImportStatus.value = null
+      csvPreview.value = []
+      
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        try {
+          const text = e.target.result
+          const parsed = parseCSV(text)
+          
+          if (parsed.length === 0) {
+            csvImportStatus.value = {
+              type: 'error',
+              message: 'No valid verses found in CSV file. Make sure the file has "Reference" and "Content" columns.'
+            }
+            return
+          }
+          
+          csvPreview.value = parsed
+          csvImportStatus.value = {
+            type: 'success',
+            message: `Successfully parsed ${parsed.length} verse${parsed.length !== 1 ? 's' : ''} from CSV file.`
+          }
+        } catch (error) {
+          csvImportStatus.value = {
+            type: 'error',
+            message: `Error parsing CSV: ${error.message}`
+          }
+          csvPreview.value = []
+        }
+      }
+      
+      reader.onerror = () => {
+        csvImportStatus.value = {
+          type: 'error',
+          message: 'Error reading file. Please try again.'
+        }
+      }
+      
+      reader.readAsText(file)
+    }
+
+    // Import verses from CSV
+    const importCSVVerses = () => {
+      if (csvPreview.value.length === 0) return
+      
+      importingCSV.value = true
+      csvImportStatus.value = null
+      
+      try {
+        const now = new Date().toISOString()
+        let importedCount = 0
+        let skippedCount = 0
+        
+        // Determine collection IDs to add verses to
+        let collectionIds = []
+        if (currentCollectionId.value && currentCollectionId.value !== 'master-list') {
+          collectionIds = [currentCollectionId.value]
+        }
+        
+        csvPreview.value.forEach(row => {
+          // Check if verse already exists (by reference)
+          const existingVerse = verses.value.find(v => 
+            v.reference.toLowerCase().trim() === row.reference.toLowerCase().trim()
+          )
+          
+          if (existingVerse) {
+            // If importing into a collection, add to that collection if not already there
+            if (currentCollectionId.value && currentCollectionId.value !== 'master-list') {
+              if (!existingVerse.collectionIds) {
+                existingVerse.collectionIds = []
+              }
+              if (!existingVerse.collectionIds.includes(currentCollectionId.value)) {
+                existingVerse.collectionIds.push(currentCollectionId.value)
+              }
+            }
+            skippedCount++
+            return
+          }
+          
+          // Create new verse
+          const verse = {
+            id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 9),
+            reference: row.reference.trim(),
+            content: row.content.trim(),
+            bibleVersion: row.version ? row.version.trim().toUpperCase() : '',
+            createdAt: now,
+            memorizationStatus: 'unmemorized',
+            reviewCount: 0,
+            lastReviewed: null,
+            nextReviewDate: null,
+            easeFactor: 2.5,
+            interval: 0,
+            reviewHistory: [],
+            collectionIds: collectionIds
+          }
+          
+          verses.value.unshift(verse)
+          importedCount++
+        })
+        
+        saveVerses()
+        
+        csvImportStatus.value = {
+          type: 'success',
+          message: `Successfully imported ${importedCount} verse${importedCount !== 1 ? 's' : ''}.${skippedCount > 0 ? ` ${skippedCount} verse${skippedCount !== 1 ? 's were' : ' was'} skipped (already exists).` : ''}`
+        }
+        
+        // Clear preview after successful import
+        setTimeout(() => {
+          csvPreview.value = []
+          if (csvFileInput.value) {
+            csvFileInput.value.value = ''
+          }
+        }, 2000)
+      } catch (error) {
+        csvImportStatus.value = {
+          type: 'error',
+          message: `Error importing verses: ${error.message}`
+        }
+      } finally {
+        importingCSV.value = false
+      }
     }
 
     // Delete collection
@@ -2541,6 +2875,7 @@ export default {
       handleFabClick,
       openNewVerse,
       openNewCollection,
+      openImportCSV,
       fabMenuOpen,
       deleteCollection,
       getCollectionName,
@@ -2562,7 +2897,15 @@ export default {
       manualSync,
       syncSuccess,
       syncError,
-      syncing
+      syncing,
+      showImportCSV,
+      csvFileInput,
+      csvPreview,
+      csvImportStatus,
+      importingCSV,
+      handleCSVFileSelect,
+      importCSVVerses,
+      closeImportCSV
     }
   }
 }
