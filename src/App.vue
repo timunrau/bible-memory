@@ -1111,6 +1111,13 @@ export default {
       return adjacentKeys.includes(typed)
     }
 
+    // Vibrate phone on wrong keypress
+    const vibrate = (pattern = 100) => {
+      if ('vibrate' in navigator) {
+        navigator.vibrate(pattern)
+      }
+    }
+
     // Calculate grade (0-5) based on accuracy
     // Grade 5 = perfect, 4 = excellent, 3 = good, 2 = hard, 1 = again, 0 = complete failure
     const calculateGrade = (totalWords, mistakes) => {
@@ -1779,6 +1786,9 @@ export default {
           }
           reviewMistakes.value++
           typedLetter.value = ''
+          
+          // Vibrate on wrong keypress
+          vibrate(50)
           
           // Auto-focus input for next word
           nextTick(() => {
