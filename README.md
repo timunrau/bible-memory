@@ -30,6 +30,7 @@ A Progressive Web App for memorizing Bible verses, built with Vue.js and Tailwin
 - [x] Two way sync with a webdav folder. Sync on every change of anything. When I connect a blank copy of the app to a webdav folder that already has bible memory data in it, import everything.
 - [x] Set bible version on the verse
 - [x] Installable PWA
+- [ ] Search for a verse by reference
 
 
 
