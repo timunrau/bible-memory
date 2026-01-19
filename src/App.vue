@@ -2482,7 +2482,9 @@ export default {
           newStatus = 'mastered'
           // Initialize spaced repetition fields when mastering
           if (!verse.nextReviewDate) {
-            verse.nextReviewDate = new Date().toISOString()
+            const tomorrow = new Date()
+            tomorrow.setDate(tomorrow.getDate() + 1)
+            verse.nextReviewDate = tomorrow.toISOString()
           }
           if (verse.reviewCount === undefined || verse.reviewCount === null) {
             verse.reviewCount = 0
@@ -2525,7 +2527,9 @@ export default {
             verse.memorizationStatus = 'mastered'
             // Initialize spaced repetition fields when mastering
             if (!verse.nextReviewDate) {
-              verse.nextReviewDate = new Date().toISOString()
+              const tomorrow = new Date()
+              tomorrow.setDate(tomorrow.getDate() + 1)
+              verse.nextReviewDate = tomorrow.toISOString()
             }
             if (verse.reviewCount === undefined || verse.reviewCount === null) {
               verse.reviewCount = 0
