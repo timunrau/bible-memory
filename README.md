@@ -1,5 +1,21 @@
 # Bible Memory PWA
 
+A Progressive Web App for memorizing Bible verses, built with Vue.js and Tailwind CSS.
+
+## Features
+
+- View your list of saved verses
+- Add new verses with reference and content
+- Data persists in local storage
+- PWA support for offline use
+- CSV import
+- WebDAV sync
+- Hosted at https://bible-memory.unrau.xyz
+
+## To Do
+- [ ] Add a better app icon
+- [ ] Make the verse review screen automatically scroll as you're typing out long verses
+
 ## Wishlist
 ### Verse Review
 - [x] Fuzzy typing: typing a letter near the correct letter should count as correct (for mobile use)
@@ -16,14 +32,7 @@
 - [x] Installable PWA
 
 
-A Progressive Web App for memorizing Bible verses, built with Vue.js and Tailwind CSS.
 
-## Features
-
-- View your list of saved verses
-- Add new verses with reference and content
-- Data persists in local storage
-- PWA support for offline use
 
 ## Getting Started
 

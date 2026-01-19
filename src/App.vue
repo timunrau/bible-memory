@@ -2480,6 +2480,22 @@ export default {
         } else if (memorizationMode.value === 'master') {
           // Completing master mode sets status to 'mastered'
           newStatus = 'mastered'
+          // Initialize spaced repetition fields when mastering
+          if (!verse.nextReviewDate) {
+            verse.nextReviewDate = new Date().toISOString()
+          }
+          if (verse.reviewCount === undefined || verse.reviewCount === null) {
+            verse.reviewCount = 0
+          }
+          if (!verse.easeFactor) {
+            verse.easeFactor = 2.5
+          }
+          if (verse.interval === undefined || verse.interval === null) {
+            verse.interval = 0
+          }
+          if (!verse.reviewHistory) {
+            verse.reviewHistory = []
+          }
         }
         
         verse.memorizationStatus = newStatus
@@ -2504,11 +2520,25 @@ export default {
         if (verse) {
           const currentStatus = verse.memorizationStatus || 'unmemorized'
           
-          // If completing master mode, mark as mastered
-          if (memorizationMode.value === 'master' && currentStatus === 'memorized') {
+          // If completing master mode, mark as mastered and initialize spaced repetition
+          if (memorizationMode.value === 'master' && currentStatus !== 'mastered') {
             verse.memorizationStatus = 'mastered'
-            // When mastered, set initial review date
-            verse.nextReviewDate = new Date().toISOString()
+            // Initialize spaced repetition fields when mastering
+            if (!verse.nextReviewDate) {
+              verse.nextReviewDate = new Date().toISOString()
+            }
+            if (verse.reviewCount === undefined || verse.reviewCount === null) {
+              verse.reviewCount = 0
+            }
+            if (!verse.easeFactor) {
+              verse.easeFactor = 2.5
+            }
+            if (verse.interval === undefined || verse.interval === null) {
+              verse.interval = 0
+            }
+            if (!verse.reviewHistory) {
+              verse.reviewHistory = []
+            }
             saveVerses()
           }
         }
