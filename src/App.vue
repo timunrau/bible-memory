@@ -572,7 +572,7 @@
             </div>
             <div class="flex items-center justify-between">
               <div class="text-xs text-gray-500">
-                {{ verses.length }} verse{{ verses.length !== 1 ? 's' : '' }}
+                {{ totalVerseCount }} verse{{ totalVerseCount !== 1 ? 's' : '' }}
               </div>
               <div class="flex items-center gap-2">
                 <span
@@ -1721,6 +1721,13 @@ export default {
       return verses.value.filter(v => isDueForReview(v)).length
     })
 
+    // Total verse count accounting for ranges (e.g., "Psalm 1:1-3" = 3 verses)
+    const totalVerseCount = computed(() => {
+      return verses.value.reduce((total, verse) => {
+        return total + countVersesInReference(verse.reference)
+      }, 0)
+    })
+
     // Biblical book order for sorting
     const bookOrder = {
       // Old Testament
@@ -2696,9 +2703,32 @@ export default {
       return collection ? collection.name : 'Unknown'
     }
 
-    // Get verse count for a collection
+    // Count the number of verses from a reference string (handles ranges like "1:1-3")
+    const countVersesInReference = (reference) => {
+      if (!reference) return 0
+      
+      // Match patterns like "Book Chapter:Verse" or "Book Chapter:StartVerse-EndVerse"
+      // Examples: "Psalm 1:1", "Psalm 1:1-3", "John 3:16-18"
+      const match = reference.match(/:(\d+)(?:-(\d+))?/i)
+      
+      if (match) {
+        const startVerse = parseInt(match[1], 10)
+        const endVerse = match[2] ? parseInt(match[2], 10) : startVerse
+        
+        // Return the count of verses in the range (inclusive)
+        return Math.max(1, endVerse - startVerse + 1)
+      }
+      
+      // If no match, assume it's a single verse
+      return 1
+    }
+
+    // Get verse count for a collection (accounts for verse ranges)
     const getCollectionVerseCount = (collectionId) => {
-      return verses.value.filter(v => v.collectionIds && v.collectionIds.includes(collectionId)).length
+      const collectionVerses = verses.value.filter(v => v.collectionIds && v.collectionIds.includes(collectionId))
+      return collectionVerses.reduce((total, verse) => {
+        return total + countVersesInReference(verse.reference)
+      }, 0)
     }
 
     // Get count of verses due for review in a collection
@@ -3651,6 +3681,7 @@ export default {
       allWordsRevealed,
       sortedVerses,
       dueVersesCount,
+      totalVerseCount,
       isDueForReview,
       getDaysUntilReview,
       getTimeUntilReview,
