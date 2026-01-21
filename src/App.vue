@@ -3169,9 +3169,50 @@ export default {
                 })
               }
             }
-            // Update verses array
-            verses.value = result.verses
+            // Update verses array - create new array reference for Vue reactivity
+            verses.value = [...result.verses]
             localStorage.setItem(STORAGE_KEY, JSON.stringify(verses.value))
+            
+            // Force Vue to update by using nextTick and verify the update
+            await nextTick()
+            
+            // Verify specific verses were updated correctly - check all verses with review dates
+            if (result.verses.length > 0) {
+              const versesWithReview = result.verses.filter(v => v.nextReviewDate)
+              console.log(`[App] Verifying ${versesWithReview.length} verses with nextReviewDate`)
+              
+              let allMatch = true
+              versesWithReview.slice(0, 5).forEach(testVerse => {
+                const localVerse = verses.value.find(v => v.id === testVerse.id)
+                if (localVerse) {
+                  const matches = localVerse.nextReviewDate === testVerse.nextReviewDate
+                  if (!matches) {
+                    allMatch = false
+                    console.log(`[App] MISMATCH - Verse ${testVerse.id} (${testVerse.reference}):`)
+                    console.log(`[App]   Expected: ${testVerse.nextReviewDate}`)
+                    console.log(`[App]   Actual: ${localVerse.nextReviewDate}`)
+                  }
+                }
+              })
+              
+              // Double-check by reading from localStorage
+              const stored = localStorage.getItem(STORAGE_KEY)
+              if (stored) {
+                const storedVerses = JSON.parse(stored)
+                const storedVerse = storedVerses.find(v => v.id === versesWithReview[0]?.id)
+                if (storedVerse && versesWithReview[0]) {
+                  const localStorageMatch = storedVerse.nextReviewDate === versesWithReview[0].nextReviewDate
+                  console.log(`[App] localStorage matches: ${localStorageMatch}`)
+                  if (!localStorageMatch) {
+                    console.log(`[App] localStorage mismatch - Expected: ${versesWithReview[0].nextReviewDate}, Got: ${storedVerse.nextReviewDate}`)
+                  }
+                }
+              }
+              
+              if (allMatch) {
+                console.log('[App] ✓ All verified verses match correctly')
+              }
+            }
             console.log('[App] Verses updated and saved to localStorage')
           }
           if (result.collections) {
