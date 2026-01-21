@@ -430,7 +430,7 @@
           </svg>
         </button>
         <h1 class="text-xl font-semibold text-gray-900 flex-1 text-center" :class="{ 'mr-20': !currentCollectionId || currentCollectionId }">
-          {{ currentCollectionId ? getCollectionName(currentCollectionId) : 'Collections' }}
+          {{ currentCollectionId ? getCollectionName(currentCollectionId) : (currentView === 'review-list' ? 'Review' : 'Collections') }}
         </h1>
         <div class="flex items-center gap-1 ml-1">
           <!-- Sync Button -->
@@ -516,8 +516,50 @@
     <div class="pt-16 pb-24 px-4">
       <div class="max-w-4xl mx-auto">
 
+      <!-- Review List View -->
+      <div v-if="currentView === 'review-list' && !currentCollectionId" class="py-4">
+        <div class="space-y-2">
+          <div
+            v-for="verse in reviewSortedVerses"
+            :key="verse.id"
+            @click="handleVerseClick(verse)"
+            :class="[
+              'bg-white rounded-xl shadow-sm p-3 border transition-all duration-200 cursor-pointer active:scale-98',
+              isDueForReview(verse)
+                ? 'border-red-200 bg-red-50'
+                : 'border-gray-200'
+            ]"
+          >
+            <div class="flex items-center justify-between">
+              <h3 class="text-base font-semibold text-gray-800 flex-1">
+                {{ verse.reference }}
+              </h3>
+              <span
+                :class="[
+                  'px-2 py-1 text-xs font-medium rounded-full ml-2',
+                  isDueForReview(verse)
+                    ? 'text-red-700 bg-red-100'
+                    : 'text-blue-700 bg-blue-100'
+                ]"
+              >
+                {{ getTimeUntilReview(verse) }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Empty state when no verses to review -->
+          <div v-if="reviewSortedVerses.length === 0" class="bg-white rounded-2xl shadow-sm p-12 text-center mt-8">
+            <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p class="text-gray-500 text-lg">No verses to review</p>
+            <p class="text-gray-400 text-sm mt-2">Master some verses to see them here</p>
+          </div>
+        </div>
+      </div>
+
       <!-- Collections View -->
-      <div v-if="!currentCollectionId" class="py-4">
+      <div v-if="currentView === 'collections' && !currentCollectionId" class="py-4">
         
         <div class="space-y-3">
           <!-- Master List Collection -->
@@ -733,8 +775,53 @@
       </div>
     </div>
 
+    <!-- Bottom Navigation -->
+    <nav v-if="!memorizingVerse && !reviewingVerse && !currentCollectionId" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40" style="padding-bottom: env(safe-area-inset-bottom);">
+      <div class="flex items-center justify-around h-16 max-w-4xl mx-auto">
+        <!-- Review Tab -->
+        <button
+          @click="navigateToReviewList"
+          :class="[
+            'flex flex-col items-center justify-center flex-1 h-full transition-colors',
+            currentView === 'review-list'
+              ? 'text-blue-600'
+              : 'text-gray-500'
+          ]"
+        >
+          <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span class="text-xs font-medium">Review</span>
+        </button>
+        
+        <!-- Collections Tab -->
+        <button
+          @click="navigateToCollections"
+          :class="[
+            'flex flex-col items-center justify-center flex-1 h-full transition-colors',
+            currentView === 'collections'
+              ? 'text-blue-600'
+              : 'text-gray-500'
+          ]"
+        >
+          <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+          <span class="text-xs font-medium">Collections</span>
+        </button>
+      </div>
+    </nav>
+
     <!-- Floating Action Button with Menu -->
-    <div class="fixed bottom-6 right-6 z-30">
+    <div 
+      v-if="!memorizingVerse && !reviewingVerse && currentView !== 'review-list'"
+      :class="[
+        'fixed right-6 z-30',
+        !currentCollectionId
+          ? 'bottom-20'
+          : 'bottom-6'
+      ]"
+    >
       <!-- FAB Menu (shown on collections screen and inside collections) -->
       <transition-group
         v-if="fabMenuOpen"
@@ -759,7 +846,7 @@
         
         <!-- New Collection Option (only on collections screen) -->
         <button
-          v-if="!currentCollectionId"
+          v-if="!currentCollectionId && currentView === 'collections'"
           key="collection"
           @click="openNewCollection"
           class="bg-white text-gray-900 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-3 px-4 py-3 min-w-[160px] active:bg-gray-50"
@@ -806,7 +893,7 @@
 
     <!-- Backdrop to close menu when clicking outside -->
     <div
-      v-if="fabMenuOpen"
+      v-if="fabMenuOpen && !memorizingVerse && !reviewingVerse && currentView !== 'review-list'"
       @click="fabMenuOpen = false"
       class="fixed inset-0 z-20"
     ></div>
@@ -1386,6 +1473,7 @@ export default {
     const editingVerse = ref(null)
     const editingCollection = ref(null)
     const currentCollectionId = ref(null) // null = all verses, string = specific collection
+    const currentView = ref('review-list') // 'review-list' or 'collections'
     const reviewingVerse = ref(null)
     const memorizingVerse = ref(null)
     const memorizationMode = ref(null) // 'learn', 'memorize', 'master'
@@ -1456,7 +1544,7 @@ export default {
         }
       } else {
         return {
-          view: 'collections'
+          view: currentView.value
         }
       }
     }
@@ -1518,6 +1606,16 @@ export default {
         reviewWords.value = []
         typedLetter.value = ''
         reviewMistakes.value = 0
+        
+        // Restore main view (review-list or collections)
+        if (state.view === 'review-list' || state.view === 'collections') {
+          currentView.value = state.view
+        } else if (state.view === 'collection') {
+          // Collection view is handled above
+        } else {
+          // Default to review-list if no view specified
+          currentView.value = 'review-list'
+        }
       }
       
       // Use nextTick to ensure DOM updates before resetting flag
@@ -1531,13 +1629,31 @@ export default {
       if (event.state) {
         restoreNavigationState(event.state)
       } else {
-        // If no state, restore to collections view
-        restoreNavigationState({ view: 'collections' })
+        // If no state, restore to review-list view
+        restoreNavigationState({ view: 'review-list' })
       }
     }
 
     // Initialize history state on mount
     const initializeHistory = () => {
+      // Read URL params to restore view state
+      const urlParams = new URLSearchParams(window.location.search)
+      const viewParam = urlParams.get('view')
+      
+      if (viewParam === 'review-list' || viewParam === 'collections') {
+        currentView.value = viewParam
+      } else if (viewParam === 'collection') {
+        const collectionId = urlParams.get('collection')
+        if (collectionId) {
+          currentCollectionId.value = collectionId
+        }
+      } else if (viewParam === 'memorization' || viewParam === 'review') {
+        // These are handled by restoreNavigationState
+      } else {
+        // Default to review-list if no view param
+        currentView.value = 'review-list'
+      }
+      
       const initialState = getNavigationState()
       window.history.replaceState(initialState, '', window.location.href)
       window.addEventListener('popstate', handlePopState)
@@ -1692,6 +1808,19 @@ export default {
         
         // Then by verse
         return aParsed.verse - bParsed.verse
+      })
+    })
+
+    // Sort verses by next review date (closest first) for review list
+    const reviewSortedVerses = computed(() => {
+      // Filter to only verses with nextReviewDate (mastered verses)
+      const versesWithReviewDate = verses.value.filter(v => v.nextReviewDate)
+      
+      return [...versesWithReviewDate].sort((a, b) => {
+        const dateA = new Date(a.nextReviewDate)
+        const dateB = new Date(b.nextReviewDate)
+        // Sort ascending (closest date first)
+        return dateA - dateB
       })
     })
 
@@ -2600,10 +2729,25 @@ export default {
       pushNavigationState({ view: 'collection', collectionId })
     }
 
-    // View all verses
+    // Navigate to review list view
+    const navigateToReviewList = () => {
+      currentCollectionId.value = null
+      currentView.value = 'review-list'
+      pushNavigationState({ view: 'review-list' })
+    }
+
+    // Navigate to collections view
+    const navigateToCollections = () => {
+      currentCollectionId.value = null
+      currentView.value = 'collections'
+      pushNavigationState({ view: 'collections' })
+    }
+
+    // View all verses (back from collection view)
     const viewAllVerses = () => {
       currentCollectionId.value = null
-      pushNavigationState({ view: 'collections' })
+      // Keep current view (review-list or collections)
+      pushNavigationState({ view: currentView.value })
     }
 
     // Check if we can switch to a given memorization mode
@@ -3454,6 +3598,10 @@ export default {
       getCollectionDueCount,
       viewCollection,
       viewAllVerses,
+      currentView,
+      reviewSortedVerses,
+      navigateToReviewList,
+      navigateToCollections,
       startEditVerse,
       saveEditedVerse,
       closeEditVerseForm,
