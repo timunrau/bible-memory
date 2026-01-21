@@ -654,7 +654,7 @@
           :key="verse.id"
           @click="handleVerseClick(verse)"
           :class="[
-            'bg-white rounded-2xl shadow-sm p-4 border transition-all duration-200 cursor-pointer active:scale-98',
+            'bg-white rounded-2xl shadow-sm py-2 px-4 border transition-all duration-200 cursor-pointer active:scale-98',
             verse.memorizationStatus === 'mastered' && isDueForReview(verse)
               ? 'border-red-200 bg-red-50'
               : verse.memorizationStatus === 'mastered'
@@ -662,7 +662,7 @@
               : 'border-yellow-200 bg-yellow-50'
           ]"
         >
-          <div class="flex items-start justify-between mb-3">
+          <div class="flex justify-between">
             <div class="flex-1 flex items-center gap-2">
               <h3 class="text-lg font-semibold text-gray-800">
                 {{ verse.reference }}
@@ -674,30 +674,13 @@
                 {{ verse.bibleVersion }}
               </span>
             </div>
-            <div class="flex items-center gap-1">
-              <button
-                @click.stop="startEditVerse(verse)"
-                class="text-gray-600 hover:bg-gray-100 p-1.5 rounded-full"
-                title="Edit verse"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </button>
-            </div>
-          </div>
+
           <div class="flex items-center justify-between">
-            <div class="text-xs text-gray-500">
-              <span v-if="verse.collectionIds && verse.collectionIds.length > 0">
-                Collections: {{ verse.collectionIds.map(id => getCollectionName(id)).join(', ') }}
-              </span>
-              <span v-else class="text-gray-400">No collections</span>
-            </div>
             <div class="flex items-center gap-2">
               <span
                 v-if="verse.memorizationStatus !== 'mastered'"
                 :class="[
-                  'px-3 py-1 text-xs font-medium rounded-full',
+                  'px-2 py-0.5 text-xs font-medium rounded-lg',
                   verse.memorizationStatus === 'unmemorized'
                     ? 'bg-yellow-100 text-yellow-800'
                     : verse.memorizationStatus === 'learned'
@@ -709,39 +692,29 @@
               </span>
               <span
                 v-else-if="isDueForReview(verse)"
-                class="px-3 py-1 text-xs font-medium text-red-700 bg-red-100 rounded-full"
+                class="px-2 py-0.5 text-xs font-medium text-red-700 bg-red-100 rounded-lg"
               >
                 Due
               </span>
               <span
                 v-else
-                class="px-3 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded-full"
+                class="px-2 py-0.5 text-xs font-medium text-blue-700 bg-blue-100 rounded-lg"
               >
                 {{ getTimeUntilReview(verse) }}
               </span>
             </div>
           </div>
-          <div class="text-xs text-gray-500 mt-2">
-            <span v-if="verse.memorizationStatus === 'mastered' && verse.reviewCount > 0">
-              Reviewed {{ verse.reviewCount }} time{{ verse.reviewCount !== 1 ? 's' : '' }}
-              <span v-if="verse.lastReviewed">
-                • Last: {{ new Date(verse.lastReviewed).toLocaleDateString() }}
-              </span>
-              <span v-if="verse.lastAccuracy">
-                • Last accuracy: {{ verse.lastAccuracy }}%
-              </span>
-              <span v-if="verse.easeFactor">
-                • Ease: {{ verse.easeFactor.toFixed(2) }}
-              </span>
-            </span>
-            <span v-else-if="verse.memorizationStatus === 'mastered'">
-              Mastered - Ready for review
-            </span>
-            <span v-else>
-              <span v-if="verse.memorizationStatus === 'unmemorized'">Click to start learning</span>
-              <span v-else-if="verse.memorizationStatus === 'learned'">Click to continue memorizing</span>
-              <span v-else-if="verse.memorizationStatus === 'memorized'">Click to master</span>
-            </span>
+                      <div class="flex items-center gap-1">
+              <button
+                @click.stop="startEditVerse(verse)"
+                class="text-gray-600 hover:bg-gray-100 p-1.5 rounded-full"
+                title="Edit verse"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
 
