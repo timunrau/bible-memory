@@ -432,35 +432,69 @@ function mergeData(localVerses, localCollections, remoteData) {
       // New verse from remote
       verseMap.set(verse.id, { ...verse, source: 'remote' })
     } else {
-      // Conflict: choose the one with more recent modification
+      // Conflict: intelligently merge verses considering memorization completeness
       // Prefer lastModified, then lastReviewed, then createdAt, fallback to empty string for comparison
       const localLastModified = existing.lastModified || existing.lastReviewed || existing.createdAt || ''
       const remoteLastModified = verse.lastModified || verse.lastReviewed || verse.createdAt || ''
       
-      // Log merge decision for debugging
-      console.log(`[WebDAV] Merging verse ${verse.id} (${verse.reference}): local=${localLastModified}, remote=${remoteLastModified}`)
+      // Check memorization completeness
+      const remoteHasMemorization = verse.nextReviewDate && verse.interval > 0
+      const localHasMemorization = existing.nextReviewDate && existing.interval > 0
       
-      // If both have timestamps, compare them
-      if (remoteLastModified && localLastModified) {
-        if (remoteLastModified > localLastModified) {
-          // Remote is newer, use it
-          console.log(`[WebDAV] Using remote version (newer timestamp) for verse ${verse.id}`)
-          verseMap.set(verse.id, { ...verse, source: 'merged' })
+      // Log merge decision for debugging
+      console.log(`[WebDAV] Merging verse ${verse.id} (${verse.reference}):`)
+      console.log(`[WebDAV]   Local: lastModified=${localLastModified}, hasMemorization=${localHasMemorization}, interval=${existing.interval || 0}, nextReviewDate=${existing.nextReviewDate || 'none'}`)
+      console.log(`[WebDAV]   Remote: lastModified=${remoteLastModified}, hasMemorization=${remoteHasMemorization}, interval=${verse.interval || 0}, nextReviewDate=${verse.nextReviewDate || 'none'}`)
+      
+      let useRemote = false
+      let reason = ''
+      
+      // Priority 1: If remote has memorization progress and local doesn't, prefer remote
+      if (remoteHasMemorization && !localHasMemorization) {
+        useRemote = true
+        reason = 'remote has memorization progress that local lacks'
+      }
+      // Priority 2: If both have memorization, compare by interval (longer = more mature/reviewed)
+      else if (remoteHasMemorization && localHasMemorization) {
+        if (verse.interval > existing.interval) {
+          useRemote = true
+          reason = `remote has longer interval (${verse.interval} vs ${existing.interval})`
+        } else if (verse.interval === existing.interval && remoteLastModified > localLastModified) {
+          useRemote = true
+          reason = `same interval but remote has newer timestamp`
         } else {
-          // Local is newer, keep it
-          console.log(`[WebDAV] Keeping local version (newer timestamp) for verse ${verse.id}`)
+          useRemote = false
+          reason = `local has longer or equal interval (${existing.interval} vs ${verse.interval})`
         }
-        // Otherwise keep local (already in map)
-      } else if (remoteLastModified && !localLastModified) {
-        // Remote has timestamp but local doesn't, use remote
-        console.log(`[WebDAV] Using remote version (local has no timestamp) for verse ${verse.id}`)
+      }
+      // Priority 3: Use timestamp comparison for other cases
+      else {
+        if (remoteLastModified && localLastModified) {
+          if (remoteLastModified > localLastModified) {
+            useRemote = true
+            reason = 'remote has newer timestamp'
+          } else {
+            useRemote = false
+            reason = 'local has newer timestamp'
+          }
+        } else if (remoteLastModified && !localLastModified) {
+          useRemote = true
+          reason = 'remote has timestamp but local does not'
+        } else if (!remoteLastModified && localLastModified) {
+          useRemote = false
+          reason = 'local has timestamp but remote does not'
+        } else {
+          useRemote = false
+          reason = 'neither has timestamp, keeping local (default)'
+        }
+      }
+      
+      if (useRemote) {
+        console.log(`[WebDAV] Using remote version for verse ${verse.id}: ${reason}`)
         verseMap.set(verse.id, { ...verse, source: 'merged' })
-      } else if (!remoteLastModified && localLastModified) {
-        // Local has timestamp but remote doesn't, keep local
-        console.log(`[WebDAV] Keeping local version (remote has no timestamp) for verse ${verse.id}`)
       } else {
-        // Neither has timestamp, keep local (default)
-        console.log(`[WebDAV] Keeping local version (neither has timestamp) for verse ${verse.id}`)
+        console.log(`[WebDAV] Keeping local version for verse ${verse.id}: ${reason}`)
+        // Local version already in map, no action needed
       }
     }
   })
