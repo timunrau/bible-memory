@@ -3157,8 +3157,22 @@ export default {
         if (result.success) {
           // Update local data with merged data from sync
           if (result.verses) {
+            console.log('[App] Sync complete - updating verses:', result.verses.length, 'local verses before:', verses.value.length)
+            // Log a sample of merged verses for debugging (especially those with review dates)
+            if (result.verses.length > 0) {
+              const versesWithReview = result.verses.filter(v => v.nextReviewDate)
+              console.log(`[App] Verses with nextReviewDate: ${versesWithReview.length}`)
+              if (versesWithReview.length > 0) {
+                const sample = versesWithReview.slice(0, 3)
+                sample.forEach(v => {
+                  console.log(`[App] Merged verse ${v.id} (${v.reference}): nextReviewDate=${v.nextReviewDate}, interval=${v.interval}, lastModified=${v.lastModified}`)
+                })
+              }
+            }
+            // Update verses array
             verses.value = result.verses
             localStorage.setItem(STORAGE_KEY, JSON.stringify(verses.value))
+            console.log('[App] Verses updated and saved to localStorage')
           }
           if (result.collections) {
             collections.value = result.collections

@@ -437,22 +437,39 @@ function mergeData(localVerses, localCollections, remoteData) {
       const localLastModified = existing.lastModified || existing.lastReviewed || existing.createdAt || ''
       const remoteLastModified = verse.lastModified || verse.lastReviewed || verse.createdAt || ''
       
+      // Log merge decision for debugging
+      console.log(`[WebDAV] Merging verse ${verse.id} (${verse.reference}): local=${localLastModified}, remote=${remoteLastModified}`)
+      
       // If both have timestamps, compare them
       if (remoteLastModified && localLastModified) {
         if (remoteLastModified > localLastModified) {
           // Remote is newer, use it
+          console.log(`[WebDAV] Using remote version (newer timestamp) for verse ${verse.id}`)
           verseMap.set(verse.id, { ...verse, source: 'merged' })
+        } else {
+          // Local is newer, keep it
+          console.log(`[WebDAV] Keeping local version (newer timestamp) for verse ${verse.id}`)
         }
         // Otherwise keep local (already in map)
       } else if (remoteLastModified && !localLastModified) {
         // Remote has timestamp but local doesn't, use remote
+        console.log(`[WebDAV] Using remote version (local has no timestamp) for verse ${verse.id}`)
         verseMap.set(verse.id, { ...verse, source: 'merged' })
+      } else if (!remoteLastModified && localLastModified) {
+        // Local has timestamp but remote doesn't, keep local
+        console.log(`[WebDAV] Keeping local version (remote has no timestamp) for verse ${verse.id}`)
+      } else {
+        // Neither has timestamp, keep local (default)
+        console.log(`[WebDAV] Keeping local version (neither has timestamp) for verse ${verse.id}`)
       }
-      // Otherwise keep local (either local has timestamp or neither has one)
     }
   })
   
-  const mergedVerses = Array.from(verseMap.values())
+  // Remove 'source' property from merged verses (it was only for debugging)
+  const mergedVerses = Array.from(verseMap.values()).map(verse => {
+    const { source, ...verseWithoutSource } = verse
+    return verseWithoutSource
+  })
 
   // Merge collections
   const collectionMap = new Map()
@@ -500,7 +517,11 @@ function mergeData(localVerses, localCollections, remoteData) {
     }
   })
   
-  const mergedCollections = Array.from(collectionMap.values())
+  // Remove 'source' property from merged collections (it was only for debugging)
+  const mergedCollections = Array.from(collectionMap.values()).map(collection => {
+    const { source, ...collectionWithoutSource } = collection
+    return collectionWithoutSource
+  })
   console.log('[WebDAV] Merged collections count:', mergedCollections.length)
 
   return {
