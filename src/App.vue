@@ -610,15 +610,6 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                 </button>
-                <button
-                  @click.stop="deleteCollection(collection.id)"
-                  class="text-red-600 hover:bg-red-50 p-1.5 rounded-full"
-                  title="Delete collection"
-                >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
               </div>
             </div>
             <p v-if="collection.description" class="text-gray-500 text-sm mb-3 line-clamp-2">{{ collection.description }}</p>
@@ -691,15 +682,6 @@
               >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </button>
-              <button
-                @click.stop="deleteVerse(verse.id)"
-                class="text-red-600 hover:bg-red-50 p-1.5 rounded-full"
-                title="Delete verse"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
@@ -1068,20 +1050,29 @@
               <p v-else class="text-sm text-gray-500">No collections yet.</p>
             </div>
 
-            <div class="flex justify-end space-x-3 pt-4">
+            <div class="flex justify-between items-center pt-4">
               <button
                 type="button"
-                @click="closeEditVerseForm"
-                class="px-6 py-2.5 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors duration-200 font-medium"
+                @click="handleDeleteVerseFromModal"
+                class="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold transition-colors duration-200"
               >
-                Cancel
+                Delete
               </button>
-              <button
-                type="submit"
-                class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors duration-200"
-              >
-                Save Changes
-              </button>
+              <div class="flex space-x-3">
+                <button
+                  type="button"
+                  @click="closeEditVerseForm"
+                  class="px-6 py-2.5 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors duration-200 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors duration-200"
+                >
+                  Save
+                </button>
+              </div>
             </div>
           </form>
         </div>
@@ -1180,20 +1171,29 @@
               ></textarea>
             </div>
 
-            <div class="flex justify-end space-x-3 pt-4">
+            <div class="flex justify-between items-center pt-4">
               <button
                 type="button"
-                @click="closeEditCollectionForm"
-                class="px-6 py-2.5 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors duration-200 font-medium"
+                @click="handleDeleteCollectionFromModal"
+                class="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold transition-colors duration-200"
               >
-                Cancel
+                Delete
               </button>
-              <button
-                type="submit"
-                class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors duration-200"
-              >
-                Save Changes
-              </button>
+              <div class="flex space-x-3">
+                <button
+                  type="button"
+                  @click="closeEditCollectionForm"
+                  class="px-6 py-2.5 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors duration-200 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors duration-200"
+                >
+                  Save
+                </button>
+              </div>
             </div>
           </form>
         </div>
@@ -2653,6 +2653,13 @@ export default {
       editingCollection.value = null
     }
 
+    // Handle delete collection from edit modal
+    const handleDeleteCollectionFromModal = () => {
+      if (editingCollection.value && deleteCollection(editingCollection.value.id)) {
+        closeEditCollectionForm()
+      }
+    }
+
     // Delete collection
     const deleteCollection = (collectionId) => {
       if (confirm('Are you sure you want to delete this collection? Verses will not be deleted, but will be removed from this collection.')) {
@@ -2679,7 +2686,9 @@ export default {
         if (currentCollectionId.value === collectionId) {
           currentCollectionId.value = null
         }
+        return true
       }
+      return false
     }
 
     // Get verses for current view (all or filtered by collection)
@@ -2771,6 +2780,13 @@ export default {
       editingVerse.value = null
     }
 
+    // Handle delete verse from edit modal
+    const handleDeleteVerseFromModal = () => {
+      if (editingVerse.value && deleteVerse(editingVerse.value.id)) {
+        closeEditVerseForm()
+      }
+    }
+
     // Delete verse
     const deleteVerse = (verseId) => {
       if (confirm('Are you sure you want to delete this verse?')) {
@@ -2779,7 +2795,9 @@ export default {
         
         verses.value = verses.value.filter(v => v.id !== verseId)
         saveVerses()
+        return true
       }
+      return false
     }
 
     // View collection
@@ -3723,6 +3741,7 @@ export default {
       startEditCollection,
       saveEditedCollection,
       closeEditCollectionForm,
+      handleDeleteCollectionFromModal,
       showEditCollectionForm,
       editingCollection,
       getCollectionName,
@@ -3737,6 +3756,7 @@ export default {
       startEditVerse,
       saveEditedVerse,
       closeEditVerseForm,
+      handleDeleteVerseFromModal,
       deleteVerse,
       showSettings,
       webdavSettings,
