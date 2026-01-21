@@ -517,8 +517,8 @@
       <div class="max-w-4xl mx-auto">
 
       <!-- Review List View -->
-      <div v-if="currentView === 'review-list' && !currentCollectionId" class="py-4">
-        <div class="space-y-2">
+      <div v-if="currentView === 'review-list' && !currentCollectionId" class="">
+        <div class="space-y-2 py-4 overflow-y-auto" style="max-height: calc(100vh - 8rem);">
           <div
             v-for="verse in reviewSortedVerses"
             :key="verse.id"
@@ -559,9 +559,9 @@
       </div>
 
       <!-- Collections View -->
-      <div v-if="currentView === 'collections' && !currentCollectionId" class="py-4">
+      <div v-if="currentView === 'collections' && !currentCollectionId" >
         
-        <div class="space-y-3">
+        <div class="space-y-3 overflow-y-auto py-4" style="max-height: calc(100vh - 8rem);">
           <!-- Master List Collection -->
           <div
             @click="viewCollection('master-list')"
@@ -655,9 +655,9 @@
       </div>
 
       <!-- Collection View -->
-      <div v-if="currentCollectionId" class="py-4">
+      <div v-if="currentCollectionId">
         <!-- Verse List -->
-        <div class="space-y-3 overflow-y-auto max-h-[calc(100vh-5rem)]">
+        <div class="space-y-3 py-4 overflow-y-auto max-h-[calc(100vh-4rem)]">
         <div
           v-for="verse in sortedVerses"
           :key="verse.id"
