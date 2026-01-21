@@ -1475,6 +1475,8 @@ export default {
     const currentCollectionId = ref(null) // null = all verses, string = specific collection
     const currentView = ref('review-list') // 'review-list' or 'collections'
     const reviewingVerse = ref(null)
+    const reviewSourceList = ref(null) // Track the source list when starting a review
+    const reviewSourceState = ref(null) // Track the original source navigation state
     const memorizingVerse = ref(null)
     const memorizationMode = ref(null) // 'learn', 'memorize', 'master'
     const reviewWords = ref([])
@@ -1568,6 +1570,25 @@ export default {
       window.history.pushState(state, '', url)
     }
 
+    // Replace history state (used when navigating sequentially without creating new history entries)
+    const replaceNavigationState = (state) => {
+      if (isHandlingBackButton) return
+      
+      const url = new URL(window.location.href)
+      url.searchParams.set('view', state.view)
+      if (state.collectionId) {
+        url.searchParams.set('collection', state.collectionId)
+      }
+      if (state.verseId) {
+        url.searchParams.set('verse', state.verseId)
+      }
+      if (state.mode) {
+        url.searchParams.set('mode', state.mode)
+      }
+      
+      window.history.replaceState(state, '', url)
+    }
+
     // Restore app state from navigation state
     const restoreNavigationState = (state) => {
       isHandlingBackButton = true
@@ -1585,6 +1606,24 @@ export default {
         currentCollectionId.value = state.collectionId
       } else {
         currentCollectionId.value = null
+      }
+      
+      // Restore main view (review-list or collections) before starting review/memorization
+      // so that startReview can determine the correct source list
+      if (state.view === 'review-list' || state.view === 'collections') {
+        currentView.value = state.view
+      } else if (state.view === 'collection') {
+        // Collection view is handled above
+      } else if (state.view === 'review' || state.view === 'memorization') {
+        // If coming from review/memorization, try to determine the source view
+        // If we have a collectionId, we came from a collection
+        // Otherwise, assume we came from review-list
+        if (!state.collectionId) {
+          currentView.value = 'review-list'
+        }
+      } else {
+        // Default to review-list if no view specified
+        currentView.value = 'review-list'
       }
       
       // Restore memorization or review view
@@ -1606,16 +1645,6 @@ export default {
         reviewWords.value = []
         typedLetter.value = ''
         reviewMistakes.value = 0
-        
-        // Restore main view (review-list or collections)
-        if (state.view === 'review-list' || state.view === 'collections') {
-          currentView.value = state.view
-        } else if (state.view === 'collection') {
-          // Collection view is handled above
-        } else {
-          // Default to review-list if no view specified
-          currentView.value = 'review-list'
-        }
       }
       
       // Use nextTick to ensure DOM updates before resetting flag
@@ -2841,12 +2870,45 @@ export default {
       reviewingVerse.value = verse
       reviewMistakes.value = 0 // Reset mistake counter
       
-      // Push navigation state
-      pushNavigationState({
+      // Store the source list and state for navigation (only if not already set, to preserve it during sequential navigation)
+      const isSequentialNavigation = !!reviewSourceList.value
+      
+      if (!reviewSourceList.value) {
+        // Store the original source state
+        if (currentCollectionId.value) {
+          // Coming from a collection - store collection verses and state
+          reviewSourceList.value = getVersesForView()
+          reviewSourceState.value = {
+            view: 'collection',
+            collectionId: currentCollectionId.value
+          }
+        } else if (currentView.value === 'review-list') {
+          // Coming from review list - store review list verses and state
+          reviewSourceList.value = reviewSortedVerses.value
+          reviewSourceState.value = {
+            view: 'review-list'
+          }
+        } else {
+          // Fallback: no specific source
+          reviewSourceList.value = null
+          reviewSourceState.value = null
+        }
+      }
+      
+      // Push or replace navigation state
+      const navigationState = {
         view: 'review',
         verseId: verse.id,
         collectionId: currentCollectionId.value
-      })
+      }
+      
+      if (isSequentialNavigation) {
+        // Replace state when navigating sequentially (from nextVerse)
+        replaceNavigationState(navigationState)
+      } else {
+        // Push state when starting a new review session
+        pushNavigationState(navigationState)
+      }
       // Split verse content into words by whitespace
       const words = verse.content.split(/\s+/).filter(word => word.trim().length > 0)
       reviewWords.value = words.map(word => {
@@ -3041,15 +3103,31 @@ export default {
           saveVerses()
         }
         
-        // Find next verse due for review
-        const dueVerses = verses.value.filter(v => isDueForReview(v))
-        if (dueVerses.length > 0) {
-          // Find current verse index in due verses
-          const currentIndex = dueVerses.findIndex(v => v.id === reviewingVerse.value.id)
-          const nextIndex = (currentIndex + 1) % dueVerses.length
-          startReview(dueVerses[nextIndex])
+        // Find next verse in the source list
+        let sourceVerses = null
+        
+        if (reviewSourceList.value && reviewSourceList.value.length > 0) {
+          // Use the source list from where we came
+          sourceVerses = reviewSourceList.value
         } else {
-          // No more verses due, exit review
+          // Fallback: use all verses due for review
+          sourceVerses = verses.value.filter(v => isDueForReview(v))
+        }
+        
+        if (sourceVerses.length > 0) {
+          // Find current verse index in source list
+          const currentIndex = sourceVerses.findIndex(v => v.id === reviewingVerse.value.id)
+          
+          if (currentIndex !== -1) {
+            // Find next verse in the list
+            const nextIndex = (currentIndex + 1) % sourceVerses.length
+            startReview(sourceVerses[nextIndex])
+          } else {
+            // Current verse not in source list, go to first verse
+            startReview(sourceVerses[0])
+          }
+        } else {
+          // No more verses in source list, exit review
           exitReview()
         }
       }
@@ -3089,20 +3167,43 @@ export default {
         }
       }
       
-      // Use browser back if not already handling a back button press
-      if (!isHandlingBackButton && window.history.length > 1) {
-        window.history.back()
-      } else {
-        // Fallback: manually restore state if no history
-        reviewingVerse.value = null
-        reviewWords.value = []
-        typedLetter.value = ''
-        reviewMistakes.value = 0
-        
-        if (currentCollectionId.value) {
-          pushNavigationState({ view: 'collection', collectionId: currentCollectionId.value })
+      // Navigate back to the source state (collection or review list)
+      // This ensures back button always goes up the hierarchy, not to previous verses
+      const sourceState = reviewSourceState.value
+      
+      // Clear source tracking
+      reviewSourceList.value = null
+      reviewSourceState.value = null
+      
+      // Reset review state
+      reviewingVerse.value = null
+      reviewWords.value = []
+      typedLetter.value = ''
+      reviewMistakes.value = 0
+      
+      // Navigate to source state
+      if (sourceState) {
+        if (sourceState.collectionId) {
+          currentCollectionId.value = sourceState.collectionId
+          pushNavigationState({ view: 'collection', collectionId: sourceState.collectionId })
+        } else if (sourceState.view === 'review-list') {
+          currentCollectionId.value = null
+          currentView.value = 'review-list'
+          pushNavigationState({ view: 'review-list' })
         } else {
-          pushNavigationState({ view: 'collections' })
+          // Fallback
+          currentCollectionId.value = null
+          currentView.value = 'review-list'
+          pushNavigationState({ view: 'review-list' })
+        }
+      } else {
+        // Fallback: use browser back if available, otherwise go to review list
+        if (!isHandlingBackButton && window.history.length > 1) {
+          window.history.back()
+        } else {
+          currentCollectionId.value = null
+          currentView.value = 'review-list'
+          pushNavigationState({ view: 'review-list' })
         }
       }
     }
