@@ -1056,13 +1056,17 @@
           
           <div class="mb-6">
             <p class="text-sm text-gray-600 mb-4">
-              Upload a CSV file with three columns: <strong>Reference</strong>, <strong>Content</strong>, and <strong>Version</strong>.
+              Upload a CSV file with columns: <strong>Reference</strong> (required), <strong>Content</strong> (required), and optional fields: <strong>Version</strong>, <strong>DaysUntilNextReview</strong>, <strong>Interval</strong>.
             </p>
             <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
               <p class="text-xs text-blue-800 mb-2"><strong>CSV Format:</strong></p>
-              <pre class="text-xs text-blue-700 bg-blue-100 p-2 rounded overflow-x-auto">Reference,Content,Version
-John 3:16,"For God so loved the world...",NIV
-Romans 8:28,"And we know that in all things...",ESV</pre>
+              <pre class="text-xs text-blue-700 bg-blue-100 p-2 rounded overflow-x-auto">Reference,Content,Version,DaysUntilNextReview,Interval
+John 3:16,"For God so loved the world...",NIV,45,60
+Romans 8:28,"And we know that in all things...",ESV,30,60</pre>
+              <p class="text-xs text-blue-700 mt-2">
+                <strong>Optional columns:</strong> Version, DaysUntilNextReview (days until next review), Interval (review interval in days). 
+                When Interval and DaysUntilNextReview are provided, verses will be imported with memorization progress.
+              </p>
             </div>
             
             <div class="mb-4">
@@ -1092,14 +1096,18 @@ Romans 8:28,"And we know that in all things...",ESV</pre>
                       <tr>
                         <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Reference</th>
                         <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Content</th>
-                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Version</th>
+                        <th v-if="csvPreview.some(r => r.version)" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Version</th>
+                        <th v-if="csvPreview.some(r => r.daysUntilNextReview)" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Days Until Review</th>
+                        <th v-if="csvPreview.some(r => r.interval)" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Interval</th>
                       </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                       <tr v-for="(row, index) in csvPreview.slice(0, 5)" :key="index">
                         <td class="px-3 py-2 text-gray-900">{{ row.reference || '' }}</td>
                         <td class="px-3 py-2 text-gray-900">{{ (row.content || '').substring(0, 50) }}{{ (row.content || '').length > 50 ? '...' : '' }}</td>
-                        <td class="px-3 py-2 text-gray-900">{{ row.version || '' }}</td>
+                        <td v-if="csvPreview.some(r => r.version)" class="px-3 py-2 text-gray-900">{{ row.version || '' }}</td>
+                        <td v-if="csvPreview.some(r => r.daysUntilNextReview)" class="px-3 py-2 text-gray-900">{{ row.daysUntilNextReview || '' }}</td>
+                        <td v-if="csvPreview.some(r => r.interval)" class="px-3 py-2 text-gray-900">{{ row.interval || '' }}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -2024,6 +2032,10 @@ export default {
       const referenceIndex = normalizedHeaders.findIndex(h => h === 'reference')
       const contentIndex = normalizedHeaders.findIndex(h => h === 'content')
       const versionIndex = normalizedHeaders.findIndex(h => h === 'version')
+      const daysUntilNextReviewIndex = normalizedHeaders.findIndex(h => 
+        h === 'daysuntilnextreview' || h === 'daysuntilreview' || h === 'days_until_next_review' || h === 'days_until_review'
+      )
+      const intervalIndex = normalizedHeaders.findIndex(h => h === 'interval')
       
       if (referenceIndex === -1 || contentIndex === -1) {
         throw new Error('CSV must have "Reference" and "Content" columns')
@@ -2038,7 +2050,9 @@ export default {
         const row = {
           reference: values[referenceIndex]?.trim() || '',
           content: values[contentIndex]?.trim() || '',
-          version: versionIndex !== -1 ? (values[versionIndex]?.trim() || '') : ''
+          version: versionIndex !== -1 ? (values[versionIndex]?.trim() || '') : '',
+          daysUntilNextReview: daysUntilNextReviewIndex !== -1 ? (values[daysUntilNextReviewIndex]?.trim() || '') : '',
+          interval: intervalIndex !== -1 ? (values[intervalIndex]?.trim() || '') : ''
         }
         
         // Only add rows with reference and content
@@ -2106,10 +2120,7 @@ export default {
           }
           
           csvPreview.value = parsed
-          csvImportStatus.value = {
-            type: 'success',
-            message: `Successfully parsed ${parsed.length} verse${parsed.length !== 1 ? 's' : ''} from CSV file.`
-          }
+          // Don't set success status here - just show preview. Status will be set after import.
         } catch (error) {
           csvImportStatus.value = {
             type: 'error',
@@ -2129,6 +2140,32 @@ export default {
       reader.readAsText(file)
     }
 
+    // Estimate review count based on interval (heuristic)
+    const estimateReviewCount = (interval) => {
+      if (!interval || interval <= 0) return 0
+      if (interval >= 60) return 10  // Mature verses with long intervals
+      if (interval >= 30) return 5
+      if (interval >= 7) return 3
+      if (interval > 0) return 1
+      return 0
+    }
+
+    // Parse and validate numeric field from CSV
+    const parseNumericField = (value, fieldName, min = 0, max = null) => {
+      if (!value || value.trim() === '') return null
+      const num = parseFloat(value.trim())
+      if (isNaN(num)) {
+        throw new Error(`Invalid ${fieldName}: "${value}" is not a number`)
+      }
+      if (num < min) {
+        throw new Error(`Invalid ${fieldName}: ${num} is less than minimum ${min}`)
+      }
+      if (max !== null && num > max) {
+        throw new Error(`Invalid ${fieldName}: ${num} is greater than maximum ${max}`)
+      }
+      return num
+    }
+
     // Import verses from CSV
     const importCSVVerses = () => {
       if (csvPreview.value.length === 0) return
@@ -2139,7 +2176,9 @@ export default {
       try {
         const now = new Date().toISOString()
         let importedCount = 0
-        let skippedCount = 0
+        let updatedCount = 0
+        let importedWithProgressCount = 0
+        let updatedWithProgressCount = 0
         
         // Determine collection IDs to add verses to
         let collectionIds = []
@@ -2148,12 +2187,70 @@ export default {
         }
         
         csvPreview.value.forEach(row => {
+          // Parse and validate interval and days until review
+          let interval = null
+          let daysUntilNextReview = null
+          
+          try {
+            interval = parseNumericField(row.interval, 'Interval', 0, 365)
+            daysUntilNextReview = parseNumericField(row.daysUntilNextReview, 'DaysUntilNextReview', 0, 365)
+          } catch (error) {
+            throw new Error(`Error in row "${row.reference}": ${error.message}`)
+          }
+          
           // Check if verse already exists (by reference)
           const existingVerse = verses.value.find(v => 
             v.reference.toLowerCase().trim() === row.reference.toLowerCase().trim()
           )
           
           if (existingVerse) {
+            // Update existing verse with memorization data
+            let hasProgressUpdate = false
+            
+            // Update version if provided
+            if (row.version && row.version.trim()) {
+              existingVerse.bibleVersion = row.version.trim().toUpperCase()
+            }
+            
+            // Update memorization fields if provided
+            if (interval !== null && interval > 0) {
+              existingVerse.memorizationStatus = 'mastered'
+              existingVerse.interval = interval
+              
+              // Estimate review count if not already set or if interval suggests more reviews
+              const estimatedCount = estimateReviewCount(interval)
+              if (!existingVerse.reviewCount || existingVerse.reviewCount < estimatedCount) {
+                existingVerse.reviewCount = estimatedCount
+              }
+              
+              hasProgressUpdate = true
+            }
+            
+            // Update next review date
+            if (daysUntilNextReview !== null) {
+              const nextDate = new Date()
+              nextDate.setDate(nextDate.getDate() + daysUntilNextReview)
+              existingVerse.nextReviewDate = nextDate.toISOString()
+              
+              // If we have a next review date and interval, set last reviewed date
+              if (interval !== null && interval > 0 && !existingVerse.lastReviewed) {
+                const lastReviewDate = new Date(nextDate)
+                lastReviewDate.setDate(lastReviewDate.getDate() - interval)
+                existingVerse.lastReviewed = lastReviewDate.toISOString()
+              }
+              
+              hasProgressUpdate = true
+            } else if (interval !== null && interval > 0 && !existingVerse.nextReviewDate) {
+              // If interval provided but no days until review, set next review to now (due immediately)
+              existingVerse.nextReviewDate = now
+            }
+            
+            // Update ease factor if we're setting up a mastered verse
+            if (interval !== null && interval > 0 && existingVerse.easeFactor === 2.5) {
+              // Keep default ease factor for now, or could calculate based on interval
+              existingVerse.easeFactor = 2.5
+            }
+            
             // If importing into a collection, add to that collection if not already there
             if (currentCollectionId.value && currentCollectionId.value !== 'master-list') {
               if (!existingVerse.collectionIds) {
@@ -2163,45 +2260,95 @@ export default {
                 existingVerse.collectionIds.push(currentCollectionId.value)
               }
             }
-            skippedCount++
+            
+            if (hasProgressUpdate) {
+              updatedWithProgressCount++
+            }
+            updatedCount++
             return
           }
           
           // Create new verse
+          let memorizationStatus = 'unmemorized'
+          let reviewCount = 0
+          let nextReviewDate = null
+          let lastReviewed = null
+          let verseInterval = 0
+          let hasProgress = false
+          
+          // Set up memorization data if provided
+          if (interval !== null && interval > 0) {
+            memorizationStatus = 'mastered'
+            verseInterval = interval
+            reviewCount = estimateReviewCount(interval)
+            hasProgress = true
+            
+            // Set next review date
+            if (daysUntilNextReview !== null) {
+              const nextDate = new Date()
+              nextDate.setDate(nextDate.getDate() + daysUntilNextReview)
+              nextReviewDate = nextDate.toISOString()
+              
+              // Estimate last reviewed date
+              const lastReviewDate = new Date(nextDate)
+              lastReviewDate.setDate(lastReviewDate.getDate() - interval)
+              lastReviewed = lastReviewDate.toISOString()
+            } else {
+              // If interval provided but no days until review, set next review to now
+              nextReviewDate = now
+            }
+          }
+          
           const verse = {
             id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 9),
             reference: row.reference.trim(),
             content: row.content.trim(),
             bibleVersion: row.version ? row.version.trim().toUpperCase() : '',
             createdAt: now,
-            memorizationStatus: 'unmemorized',
-            reviewCount: 0,
-            lastReviewed: null,
-            nextReviewDate: null,
+            memorizationStatus: memorizationStatus,
+            reviewCount: reviewCount,
+            lastReviewed: lastReviewed,
+            nextReviewDate: nextReviewDate,
             easeFactor: 2.5,
-            interval: 0,
+            interval: verseInterval,
             reviewHistory: [],
             collectionIds: collectionIds
           }
           
           verses.value.unshift(verse)
           importedCount++
+          if (hasProgress) {
+            importedWithProgressCount++
+          }
         })
         
         saveVerses()
         
+        // Build status message
+        let statusMessage = `Successfully imported ${importedCount} verse${importedCount !== 1 ? 's' : ''}`
+        if (importedWithProgressCount > 0) {
+          statusMessage += ` (${importedWithProgressCount} with memorization progress)`
+        }
+        if (updatedCount > 0) {
+          statusMessage += `. Updated ${updatedCount} existing verse${updatedCount !== 1 ? 's' : ''}`
+          if (updatedWithProgressCount > 0) {
+            statusMessage += ` (${updatedWithProgressCount} with memorization progress)`
+          }
+        }
+        
         csvImportStatus.value = {
           type: 'success',
-          message: `Successfully imported ${importedCount} verse${importedCount !== 1 ? 's' : ''}.${skippedCount > 0 ? ` ${skippedCount} verse${skippedCount !== 1 ? 's were' : ' was'} skipped (already exists).` : ''}`
+          message: statusMessage
         }
         
         // Clear preview after successful import
         setTimeout(() => {
           csvPreview.value = []
+          csvImportStatus.value = null
           if (csvFileInput.value) {
             csvFileInput.value.value = ''
           }
-        }, 2000)
+        }, 3000)
       } catch (error) {
         csvImportStatus.value = {
           type: 'error',
