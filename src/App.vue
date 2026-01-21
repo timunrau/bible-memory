@@ -1699,7 +1699,21 @@ export default {
     const loadCollections = () => {
       const stored = localStorage.getItem(COLLECTIONS_KEY)
       if (stored) {
-        collections.value = JSON.parse(stored)
+        const loadedCollections = JSON.parse(stored)
+        let needsMigration = false
+        // Migrate existing collections to include lastModified
+        collections.value = loadedCollections.map(collection => {
+          // Add lastModified if missing (use createdAt or current time as fallback)
+          if (!collection.hasOwnProperty('lastModified')) {
+            collection.lastModified = collection.createdAt || new Date().toISOString()
+            needsMigration = true
+          }
+          return collection
+        })
+        // Only save if we actually migrated something (and avoid triggering sync during load)
+        if (needsMigration) {
+          localStorage.setItem(COLLECTIONS_KEY, JSON.stringify(collections.value))
+        }
       }
     }
 
@@ -1744,6 +1758,10 @@ export default {
           // Add bibleVersion if missing
           if (!verse.hasOwnProperty('bibleVersion')) {
             verse.bibleVersion = ''
+          }
+          // Add lastModified if missing (use createdAt or current time as fallback)
+          if (!verse.hasOwnProperty('lastModified')) {
+            verse.lastModified = verse.lastReviewed || verse.createdAt || new Date().toISOString()
           }
           return verse
         })
@@ -1999,6 +2017,7 @@ export default {
           content: newVerse.value.content.trim(),
           bibleVersion: newVerse.value.bibleVersion ? newVerse.value.bibleVersion.trim().toUpperCase() : '',
           createdAt: now,
+          lastModified: now, // Track when verse was last modified
           memorizationStatus: 'unmemorized', // unmemorized, learned, memorized, mastered
           reviewCount: 0,
           lastReviewed: null,
@@ -2033,7 +2052,8 @@ export default {
           id: Date.now().toString(),
           name: newCollection.value.name.trim(),
           description: newCollection.value.description.trim(),
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          lastModified: new Date().toISOString() // Track when collection was last modified
         }
         collections.value.push(collection)
         saveCollections()
@@ -2275,10 +2295,12 @@ export default {
           if (existingVerse) {
             // Update existing verse with memorization data
             let hasProgressUpdate = false
+            let hasAnyUpdate = false
             
             // Update version if provided
             if (row.version && row.version.trim()) {
               existingVerse.bibleVersion = row.version.trim().toUpperCase()
+              hasAnyUpdate = true
             }
             
             // Update memorization fields if provided
@@ -2293,6 +2315,7 @@ export default {
               }
               
               hasProgressUpdate = true
+              hasAnyUpdate = true
             }
             
             // Update next review date
@@ -2309,9 +2332,11 @@ export default {
               }
               
               hasProgressUpdate = true
+              hasAnyUpdate = true
             } else if (interval !== null && interval > 0 && !existingVerse.nextReviewDate) {
               // If interval provided but no days until review, set next review to now (due immediately)
               existingVerse.nextReviewDate = now
+              hasAnyUpdate = true
             }
             
             // Update ease factor if we're setting up a mastered verse
@@ -2327,7 +2352,13 @@ export default {
               }
               if (!existingVerse.collectionIds.includes(currentCollectionId.value)) {
                 existingVerse.collectionIds.push(currentCollectionId.value)
+                hasAnyUpdate = true
               }
+            }
+            
+            // Update lastModified timestamp whenever verse is modified
+            if (hasAnyUpdate) {
+              existingVerse.lastModified = now
             }
             
             if (hasProgressUpdate) {
@@ -2374,6 +2405,7 @@ export default {
             content: row.content.trim(),
             bibleVersion: row.version ? row.version.trim().toUpperCase() : '',
             createdAt: now,
+            lastModified: now, // Track when verse was last modified
             memorizationStatus: memorizationStatus,
             reviewCount: reviewCount,
             lastReviewed: lastReviewed,
@@ -2443,6 +2475,7 @@ export default {
         if (collection) {
           collection.name = editingCollection.value.name.trim()
           collection.description = editingCollection.value.description ? editingCollection.value.description.trim() : ''
+          collection.lastModified = new Date().toISOString() // Track when collection was last modified
           saveCollections()
           closeEditCollectionForm()
         }
@@ -2537,6 +2570,7 @@ export default {
           verse.content = editingVerse.value.content.trim()
           verse.bibleVersion = editingVerse.value.bibleVersion ? editingVerse.value.bibleVersion.trim().toUpperCase() : ''
           verse.collectionIds = editingVerse.value.collectionIds || []
+          verse.lastModified = new Date().toISOString() // Track when verse was last modified
           saveVerses()
           closeEditVerseForm()
         }
@@ -2744,6 +2778,7 @@ export default {
         }
         
         verse.memorizationStatus = newStatus
+        verse.lastModified = new Date().toISOString() // Track when verse was last modified
         saveVerses()
         
         // Start next mode
@@ -2786,6 +2821,7 @@ export default {
             if (!verse.reviewHistory) {
               verse.reviewHistory = []
             }
+            verse.lastModified = new Date().toISOString() // Track when verse was last modified
             saveVerses()
           }
         }
@@ -2847,6 +2883,7 @@ export default {
           verse.interval = reviewData.interval
           verse.lastGrade = grade
           verse.lastAccuracy = ((totalWords - reviewMistakes.value) / totalWords * 100).toFixed(1)
+          verse.lastModified = new Date().toISOString() // Track when verse was last modified
           
           // Track review history
           if (!verse.reviewHistory) verse.reviewHistory = []
@@ -2893,6 +2930,7 @@ export default {
           verse.interval = reviewData.interval
           verse.lastGrade = grade
           verse.lastAccuracy = ((totalWords - reviewMistakes.value) / totalWords * 100).toFixed(1)
+          verse.lastModified = new Date().toISOString() // Track when verse was last modified
           
           // Track review history
           if (!verse.reviewHistory) verse.reviewHistory = []

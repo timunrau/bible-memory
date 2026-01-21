@@ -432,10 +432,10 @@ function mergeData(localVerses, localCollections, remoteData) {
       // New verse from remote
       verseMap.set(verse.id, { ...verse, source: 'remote' })
     } else {
-      // Conflict: choose the one with more recent activity
-      // Prefer lastReviewed, then createdAt, fallback to empty string for comparison
-      const localLastModified = existing.lastReviewed || existing.createdAt || ''
-      const remoteLastModified = verse.lastReviewed || verse.createdAt || ''
+      // Conflict: choose the one with more recent modification
+      // Prefer lastModified, then lastReviewed, then createdAt, fallback to empty string for comparison
+      const localLastModified = existing.lastModified || existing.lastReviewed || existing.createdAt || ''
+      const remoteLastModified = verse.lastModified || verse.lastReviewed || verse.createdAt || ''
       
       // If both have timestamps, compare them
       if (remoteLastModified && localLastModified) {
@@ -484,9 +484,10 @@ function mergeData(localVerses, localCollections, remoteData) {
       console.log('[WebDAV] Adding new collection from remote:', collection.id)
       collectionMap.set(collection.id, { ...collection, source: 'remote' })
     } else {
-      // Conflict: use the one with more recent createdAt
-      const localTime = existing.createdAt || ''
-      const remoteTime = collection.createdAt || ''
+      // Conflict: use the one with more recent modification
+      // Prefer lastModified, then createdAt
+      const localTime = existing.lastModified || existing.createdAt || ''
+      const remoteTime = collection.lastModified || collection.createdAt || ''
       
       if (remoteTime && localTime) {
         if (remoteTime > localTime) {
