@@ -558,15 +558,26 @@
           >
             <div class="flex items-start justify-between mb-2">
               <h3 class="text-lg font-semibold text-gray-800 flex-1">{{ collection.name }}</h3>
-              <button
-                @click.stop="deleteCollection(collection.id)"
-                class="text-red-600 hover:bg-red-50 p-1 rounded-full -mr-1"
-                title="Delete collection"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+              <div class="flex items-center gap-1">
+                <button
+                  @click.stop="startEditCollection(collection)"
+                  class="text-gray-600 hover:bg-gray-100 p-1.5 rounded-full"
+                  title="Edit collection"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+                <button
+                  @click.stop="deleteCollection(collection.id)"
+                  class="text-red-600 hover:bg-red-50 p-1.5 rounded-full"
+                  title="Delete collection"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             </div>
             <p v-if="collection.description" class="text-gray-500 text-sm mb-3 line-clamp-2">{{ collection.description }}</p>
             <div class="flex items-center justify-between">
@@ -1045,6 +1056,62 @@
         </div>
       </div>
 
+      <!-- Edit Collection Form Modal -->
+      <div
+        v-if="showEditCollectionForm"
+        class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+        @click.self="closeEditCollectionForm"
+      >
+        <div class="bg-white rounded-3xl shadow-xl max-w-2xl w-full p-6">
+          <h2 class="text-2xl font-bold text-gray-900 mb-6">Edit Collection</h2>
+          
+          <form @submit.prevent="saveEditedCollection" class="space-y-4" v-if="editingCollection">
+            <div>
+              <label for="edit-collection-name" class="block text-sm font-medium text-gray-700 mb-2">
+                Collection Name
+              </label>
+              <input
+                id="edit-collection-name"
+                v-model="editingCollection.name"
+                type="text"
+                placeholder="e.g., Favorite Verses, Daily Devotion"
+                required
+                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+            </div>
+
+            <div>
+              <label for="edit-collection-description" class="block text-sm font-medium text-gray-700 mb-2">
+                Description (optional)
+              </label>
+              <textarea
+                id="edit-collection-description"
+                v-model="editingCollection.description"
+                rows="3"
+                placeholder="Describe this collection..."
+                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+              ></textarea>
+            </div>
+
+            <div class="flex justify-end space-x-3 pt-4">
+              <button
+                type="button"
+                @click="closeEditCollectionForm"
+                class="px-6 py-2.5 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors duration-200 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors duration-200"
+              >
+                Save Changes
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
       <!-- CSV Import Modal -->
       <div
         v-if="showImportCSV"
@@ -1313,9 +1380,11 @@ export default {
     const showForm = ref(false)
     const showCollectionForm = ref(false)
     const showEditVerseForm = ref(false)
+    const showEditCollectionForm = ref(false)
     const showSettings = ref(false)
     const showImportCSV = ref(false)
     const editingVerse = ref(null)
+    const editingCollection = ref(null)
     const currentCollectionId = ref(null) // null = all verses, string = specific collection
     const reviewingVerse = ref(null)
     const memorizingVerse = ref(null)
@@ -2359,6 +2428,33 @@ export default {
       }
     }
 
+    // Edit collection
+    const startEditCollection = (collection) => {
+      editingCollection.value = {
+        ...collection
+      }
+      showEditCollectionForm.value = true
+    }
+
+    // Save edited collection
+    const saveEditedCollection = () => {
+      if (editingCollection.value && editingCollection.value.name) {
+        const collection = collections.value.find(c => c.id === editingCollection.value.id)
+        if (collection) {
+          collection.name = editingCollection.value.name.trim()
+          collection.description = editingCollection.value.description ? editingCollection.value.description.trim() : ''
+          saveCollections()
+          closeEditCollectionForm()
+        }
+      }
+    }
+
+    // Close edit collection form
+    const closeEditCollectionForm = () => {
+      showEditCollectionForm.value = false
+      editingCollection.value = null
+    }
+
     // Delete collection
     const deleteCollection = (collectionId) => {
       if (confirm('Are you sure you want to delete this collection? Verses will not be deleted, but will be removed from this collection.')) {
@@ -3255,6 +3351,11 @@ export default {
       openImportCSV,
       fabMenuOpen,
       deleteCollection,
+      startEditCollection,
+      saveEditedCollection,
+      closeEditCollectionForm,
+      showEditCollectionForm,
+      editingCollection,
       getCollectionName,
       getCollectionVerseCount,
       getCollectionDueCount,

@@ -35,6 +35,20 @@ A Progressive Web App for memorizing Bible verses, built with Vue.js and Tailwin
 
 
 
+
+## How to import form biblememory.com
+1. Use brave browser and open the collection you want to import via the web page.
+2. Open leo AI and use this prompt to conver the collection to CSV.
+```
+For the list of verses on this page, export to CSV. Map it to columns as follows
+
+- Verse reference -> "Reference"
+- Verse content -> "Content"
+- Bible version (HCSB in this case) -> "Version"
+- Due in x days -> "DaysUntilNextReview" (only add the number e.g., 54)
+- Review every x months -> "Interval" (only add the number, and convert to number of days)
+```
+
 ## Getting Started
 
 ### Install Dependencies
