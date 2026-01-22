@@ -153,22 +153,6 @@
         </div>
       </div>
 
-      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-        <div class="flex justify-between items-center mb-2">
-          <p class="text-sm text-blue-800">
-            <strong>Progress:</strong> {{ revealedCount }} / {{ reviewWords.length }} words
-          </p>
-          <p class="text-sm text-blue-800">
-            <strong>Mistakes:</strong> {{ reviewMistakes }}
-          </p>
-        </div>
-        <div class="mt-2 w-full bg-blue-200 rounded-full h-2">
-          <div
-            class="bg-blue-600 h-2 rounded-full transition-all duration-300"
-            :style="{ width: `${(revealedCount / reviewWords.length) * 100}%` }"
-          ></div>
-        </div>
-      </div>
 
       <div class="text-center">
         <input
@@ -327,27 +311,6 @@
               </span>
             </span>
           </div>
-        </div>
-      </div>
-
-      <!-- Progress section - stays above keyboard -->
-      <div class="flex-shrink-0 bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-        <div class="flex justify-between items-center mb-2">
-          <p class="text-sm text-blue-800">
-            <strong>Progress:</strong> {{ revealedCount }} / {{ reviewWords.length }} words revealed
-          </p>
-          <p class="text-sm text-blue-800">
-            <strong>Mistakes:</strong> {{ reviewMistakes }}
-          </p>
-        </div>
-        <div class="mt-2 w-full bg-blue-200 rounded-full h-2">
-          <div
-            class="bg-blue-600 h-2 rounded-full transition-all duration-300"
-            :style="{ width: `${(revealedCount / reviewWords.length) * 100}%` }"
-          ></div>
-        </div>
-        <div v-if="reviewWords.length > 0" class="mt-2 text-xs text-blue-700">
-          <strong>Accuracy:</strong> {{ ((reviewWords.length - reviewMistakes) / reviewWords.length * 100).toFixed(1) }}%
         </div>
       </div>
 
