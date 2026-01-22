@@ -567,13 +567,8 @@
             @click="viewCollection('master-list')"
             class="bg-blue-50 rounded-2xl shadow-sm p-4 cursor-pointer active:scale-98 transition-all duration-200 border border-blue-200"
           >
-            <div class="flex items-start justify-between mb-2">
+            <div class="flex items-start justify-between">
               <h3 class="text-lg font-semibold text-blue-900 flex-1">Master List</h3>
-            </div>
-            <div class="flex items-center justify-between">
-              <div class="text-xs text-gray-500">
-                {{ totalVerseCount }} verse{{ totalVerseCount !== 1 ? 's' : '' }}
-              </div>
               <div class="flex items-center gap-2">
                 <span
                   v-if="dueVersesCount > 0"
@@ -589,6 +584,11 @@
                 </span>
               </div>
             </div>
+            <div class="flex items-center justify-between">
+              <div class="text-xs text-gray-500">
+                {{ totalVerseCount }} verse{{ totalVerseCount !== 1 ? 's' : '' }}
+              </div>
+            </div>
           </div>
 
           <!-- User Collections -->
@@ -598,9 +598,24 @@
             @click="viewCollection(collection.id)"
             class="bg-white rounded-2xl shadow-sm p-4 cursor-pointer active:scale-98 transition-all duration-200 border border-gray-100"
           >
-            <div class="flex items-start justify-between mb-2">
+            <div class="flex justify-between">
               <h3 class="text-lg font-semibold text-gray-800 flex-1">{{ collection.name }}</h3>
-              <div class="flex items-center gap-1">
+
+              <div class="flex items-center gap-2">
+                <span
+                  v-if="getCollectionDueCount(collection.id) > 0"
+                  class="px-2 py-0.5 text-xs font-medium text-red-700 bg-red-100 rounded-md"
+                >
+                  {{ getCollectionDueCount(collection.id) }}
+                </span>
+                <span
+                  v-else-if="getCollectionVerseCount(collection.id) > 0"
+                  class="px-2 py-0.5 text-xs font-medium text-green-700 bg-green-100 rounded-md"
+                >
+                  ✓
+                </span>
+              </div>
+                            <div class="flex items-center gap-1">
                 <button
                   @click.stop="startEditCollection(collection)"
                   class="text-gray-600 hover:bg-gray-100 p-1.5 rounded-full"
@@ -617,20 +632,7 @@
               <div class="text-xs text-gray-500">
                 {{ getCollectionVerseCount(collection.id) }} verse{{ getCollectionVerseCount(collection.id) !== 1 ? 's' : '' }}
               </div>
-              <div class="flex items-center gap-2">
-                <span
-                  v-if="getCollectionDueCount(collection.id) > 0"
-                  class="px-3 py-1 text-xs font-medium text-red-700 bg-red-100 rounded-full"
-                >
-                  {{ getCollectionDueCount(collection.id) }}
-                </span>
-                <span
-                  v-else-if="getCollectionVerseCount(collection.id) > 0"
-                  class="px-3 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full"
-                >
-                  ✓
-                </span>
-              </div>
+
             </div>
           </div>
 
