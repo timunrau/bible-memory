@@ -1224,17 +1224,47 @@ Romans 8:28,"And we know that in all things...",ESV,30,60</pre>
             </div>
             
             <div class="mb-4">
-              <label for="csv-file" class="block text-sm font-medium text-gray-700 mb-2">
-                Select CSV File
+              <label class="block text-sm font-medium text-gray-700 mb-3">
+                Import CSV
               </label>
-              <input
-                id="csv-file"
-                ref="csvFileInput"
-                type="file"
-                accept=".csv"
-                @change="handleCSVFileSelect"
-                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              />
+              
+              <!-- File Upload Option -->
+              <div class="mb-4">
+                <label for="csv-file" class="block text-xs font-medium text-gray-600 mb-2">
+                  Option 1: Upload CSV File
+                </label>
+                <input
+                  id="csv-file"
+                  ref="csvFileInput"
+                  type="file"
+                  accept=".csv"
+                  @change="handleCSVFileSelect"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                />
+              </div>
+              
+              <!-- Divider -->
+              <div class="flex items-center my-4">
+                <div class="flex-1 border-t border-gray-300"></div>
+                <span class="px-3 text-xs text-gray-500 uppercase">or</span>
+                <div class="flex-1 border-t border-gray-300"></div>
+              </div>
+              
+              <!-- Paste CSV Option -->
+              <div>
+                <label for="csv-text" class="block text-xs font-medium text-gray-600 mb-2">
+                  Option 2: Paste CSV Content
+                </label>
+                <textarea
+                  id="csv-text"
+                  ref="csvTextarea"
+                  v-model="csvPastedText"
+                  @input="handleCSVPaste"
+                  placeholder="Paste your CSV content here..."
+                  rows="6"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-mono text-sm"
+                ></textarea>
+              </div>
             </div>
             
             <div v-if="csvImportStatus" class="p-3 rounded-lg mb-4" :class="csvImportStatus.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'">
@@ -1493,6 +1523,8 @@ export default {
     const syncError = ref(null)
     const fabMenuOpen = ref(false)
     const csvFileInput = ref(null)
+    const csvTextarea = ref(null)
+    const csvPastedText = ref('')
     const csvPreview = ref([])
     const csvImportStatus = ref(null)
     const importingCSV = ref(false)
@@ -2274,6 +2306,7 @@ export default {
       showImportCSV.value = true
       csvPreview.value = []
       csvImportStatus.value = null
+      csvPastedText.value = ''
     }
 
     // Close CSV import modal
@@ -2281,6 +2314,7 @@ export default {
       showImportCSV.value = false
       csvPreview.value = []
       csvImportStatus.value = null
+      csvPastedText.value = ''
       if (csvFileInput.value) {
         csvFileInput.value.value = ''
       }
@@ -2370,6 +2404,9 @@ export default {
       const file = event.target.files[0]
       if (!file) return
       
+      // Clear textarea if file is selected
+      csvPastedText.value = ''
+      
       csvImportStatus.value = null
       csvPreview.value = []
       
@@ -2406,6 +2443,44 @@ export default {
       }
       
       reader.readAsText(file)
+    }
+
+    // Handle CSV paste from textarea
+    const handleCSVPaste = () => {
+      const text = csvPastedText.value
+      
+      // Clear file input if text is pasted
+      if (text.trim() && csvFileInput.value) {
+        csvFileInput.value.value = ''
+      }
+      
+      csvImportStatus.value = null
+      csvPreview.value = []
+      
+      if (!text.trim()) {
+        return
+      }
+      
+      try {
+        const parsed = parseCSV(text)
+        
+        if (parsed.length === 0) {
+          csvImportStatus.value = {
+            type: 'error',
+            message: 'No valid verses found in CSV content. Make sure the content has "Reference" and "Content" columns.'
+          }
+          return
+        }
+        
+        csvPreview.value = parsed
+        // Don't set success status here - just show preview. Status will be set after import.
+      } catch (error) {
+        csvImportStatus.value = {
+          type: 'error',
+          message: `Error parsing CSV: ${error.message}`
+        }
+        csvPreview.value = []
+      }
     }
 
     // Estimate review count based on interval (heuristic)
@@ -2625,6 +2700,7 @@ export default {
         setTimeout(() => {
           csvPreview.value = []
           csvImportStatus.value = null
+          csvPastedText.value = ''
           if (csvFileInput.value) {
             csvFileInput.value.value = ''
           }
@@ -3875,6 +3951,8 @@ export default {
       csvImportStatus,
       importingCSV,
       handleCSVFileSelect,
+      handleCSVPaste,
+      csvPastedText,
       importCSVVerses,
       closeImportCSV
     }
