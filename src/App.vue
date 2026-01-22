@@ -757,7 +757,7 @@
 
     <!-- Bottom Navigation -->
     <nav v-if="!memorizingVerse && !reviewingVerse && !currentCollectionId" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40" style="padding-bottom: env(safe-area-inset-bottom);">
-      <div class="flex items-center justify-around h-16 max-w-4xl mx-auto">
+      <div class="flex-row-reverse flex items-center justify-around h-16 max-w-4xl mx-auto">
         <!-- Review Tab -->
         <button
           @click="navigateToReviewList"
