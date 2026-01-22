@@ -64,52 +64,10 @@
       </div>
     </header>
 
-    <div ref="memorizationScrollContainer" class="flex-1 overflow-y-auto max-w-4xl mx-auto w-full px-4 py-4">
-      <div class="mb-6">
-        
-        <!-- Progress Indicator -->
-        <div class="flex items-center gap-2 mb-4">
-          <div
-            v-for="(stage, index) in [
-              { name: 'Learn', status: 'unmemorized', mode: 'learn' },
-              { name: 'Memorize', status: 'learned', mode: 'memorize' },
-              { name: 'Master', status: 'memorized', mode: 'master' }
-            ]"
-            :key="index"
-            class="flex items-center"
-          >
-            <div
-              @click="switchToMemorizationMode(stage.mode)"
-              :class="[
-                'px-4 py-2 rounded-lg font-semibold transition-colors duration-200',
-                memorizationMode === stage.mode
-                  ? 'bg-blue-600 text-white cursor-pointer hover:bg-blue-700'
-                  : getMemorizationStatus(memorizingVerse) === 'mastered' || 
-                    (stage.status === 'unmemorized' && getMemorizationStatus(memorizingVerse) === 'learned') ||
-                    (stage.status === 'learned' && getMemorizationStatus(memorizingVerse) === 'memorized') ||
-                    (stage.status === 'memorized' && getMemorizationStatus(memorizingVerse) === 'mastered')
-                  ? 'bg-green-100 text-green-800 cursor-pointer hover:bg-green-200'
-                  : canSwitchToMode(stage.mode)
-                  ? 'bg-gray-200 text-gray-600 cursor-pointer hover:bg-gray-300'
-                  : 'bg-gray-200 text-gray-400'
-              ]"
-            >
-              {{ stage.name }}
-            </div>
-            <svg
-              v-if="index < 2"
-              class="w-6 h-6 mx-2 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-            </svg>
-          </div>
-        </div>
-      </div>
+    <div ref="memorizationScrollContainer" class="flex-1 overflow-y-auto max-w-4xl mx-auto w-full sm:px-4">
+     
 
-      <div class="bg-white rounded-lg shadow-xl p-4 my-4">
+      <div class="bg-white rounded-lg shadow-xl p-4 mb-4 sm:my-4">
         <div
           class="text-xl leading-relaxed text-gray-900 font-serif min-h-[200px]"
           @click="focusInput"
@@ -150,6 +108,50 @@
               </span>
             </span>
           </span>
+        </div>
+      </div>
+
+       <div class="mb-6">
+        
+        <!-- Progress Indicator -->
+        <div class="flex items-center justify-center gap-2 mb-4">
+          <div
+            v-for="(stage, index) in [
+              { name: 'Learn', status: 'unmemorized', mode: 'learn' },
+              { name: 'Memorize', status: 'learned', mode: 'memorize' },
+              { name: 'Master', status: 'memorized', mode: 'master' }
+            ]"
+            :key="index"
+            class="flex items-center"
+          >
+            <div
+              @click="switchToMemorizationMode(stage.mode)"
+              :class="[
+                'px-4 py-2 rounded-lg font-semibold transition-colors duration-200',
+                memorizationMode === stage.mode
+                  ? 'bg-blue-600 text-white cursor-pointer hover:bg-blue-700'
+                  : getMemorizationStatus(memorizingVerse) === 'mastered' || 
+                    (stage.status === 'unmemorized' && getMemorizationStatus(memorizingVerse) === 'learned') ||
+                    (stage.status === 'learned' && getMemorizationStatus(memorizingVerse) === 'memorized') ||
+                    (stage.status === 'memorized' && getMemorizationStatus(memorizingVerse) === 'mastered')
+                  ? 'bg-green-100 text-green-800 cursor-pointer hover:bg-green-200'
+                  : canSwitchToMode(stage.mode)
+                  ? 'bg-gray-200 text-gray-600 cursor-pointer hover:bg-gray-300'
+                  : 'bg-gray-200 text-gray-400'
+              ]"
+            >
+              {{ stage.name }}
+            </div>
+            <svg
+              v-if="index < 2"
+              class="w-6 h-6 mx-2 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
         </div>
       </div>
 
@@ -289,10 +291,10 @@
       </div>
     </header>
 
-    <div class="flex-1 flex flex-col overflow-hidden max-w-4xl mx-auto w-full px-4">
+    <div class="flex-1 flex flex-col overflow-hidden max-w-4xl mx-auto w-full sm:px-4">
       <!-- Scrollable text box -->
-      <div ref="reviewTextContainer" class="flex-1 overflow-y-auto min-h-0 py-4">
-        <div class="bg-white rounded-lg shadow-xl p-4">
+      <div ref="reviewTextContainer" class="flex-1 overflow-y-auto min-h-0 sm:py-4">
+        <div class="bg-white sm:rounded-lg sm:shadow-xl p-4">
           <div
             class="text-xl leading-relaxed text-gray-900 font-serif"
             @click="focusInput"
@@ -1728,7 +1730,10 @@ export default {
 
     // Check if "No Collection" has any verses
     const hasNoCollectionVerses = computed(() => {
-      return verses.value.some(v => !v.collectionIds || v.collectionIds.length === 0)
+      return verses.value.some(v => {
+        const ids = v.collectionIds
+        return !ids || (Array.isArray(ids) && ids.length === 0)
+      })
     })
 
     // Check if "To Learn" has any verses
@@ -2708,7 +2713,10 @@ export default {
         }
         // Handle "no-collection" - verses that don't belong to any collection
         if (currentCollectionId.value === 'no-collection') {
-          return verses.value.filter(v => !v.collectionIds || v.collectionIds.length === 0)
+          return verses.value.filter(v => {
+            const ids = v.collectionIds
+            return !ids || (Array.isArray(ids) && ids.length === 0)
+          })
         }
         // Handle "to-learn" - verses that are not yet mastered
         if (currentCollectionId.value === 'to-learn') {
@@ -2760,7 +2768,10 @@ export default {
       if (collectionId === 'master-list') {
         collectionVerses = verses.value
       } else if (collectionId === 'no-collection') {
-        collectionVerses = verses.value.filter(v => !v.collectionIds || v.collectionIds.length === 0)
+        collectionVerses = verses.value.filter(v => {
+          const ids = v.collectionIds
+          return !ids || (Array.isArray(ids) && ids.length === 0)
+        })
       } else if (collectionId === 'to-learn') {
         collectionVerses = verses.value.filter(v => v.memorizationStatus !== 'mastered')
       } else {
@@ -2777,7 +2788,10 @@ export default {
       if (collectionId === 'master-list') {
         collectionVerses = verses.value
       } else if (collectionId === 'no-collection') {
-        collectionVerses = verses.value.filter(v => !v.collectionIds || v.collectionIds.length === 0)
+        collectionVerses = verses.value.filter(v => {
+          const ids = v.collectionIds
+          return !ids || (Array.isArray(ids) && ids.length === 0)
+        })
       } else if (collectionId === 'to-learn') {
         collectionVerses = verses.value.filter(v => v.memorizationStatus !== 'mastered')
       } else {
