@@ -2376,9 +2376,35 @@ export default {
         const char = line[i]
         const nextChar = line[i + 1]
         
-        if (char === '"') {
+        if (char === '\\' && inQuotes) {
+          // Handle backslash escape sequences within quoted fields
+          if (nextChar === '"') {
+            // Escaped quote: \"
+            current += '"'
+            i++ // Skip the quote
+          } else if (nextChar === '\\') {
+            // Escaped backslash: \\
+            current += '\\'
+            i++ // Skip the next backslash
+          } else if (nextChar === 'n') {
+            // Escaped newline: \n
+            current += '\n'
+            i++ // Skip the 'n'
+          } else if (nextChar === 't') {
+            // Escaped tab: \t
+            current += '\t'
+            i++ // Skip the 't'
+          } else if (nextChar === 'r') {
+            // Escaped carriage return: \r
+            current += '\r'
+            i++ // Skip the 'r'
+          } else {
+            // Unknown escape sequence, keep the backslash
+            current += char
+          }
+        } else if (char === '"') {
           if (inQuotes && nextChar === '"') {
-            // Escaped quote
+            // Standard CSV escaped quote (e.g., "")
             current += '"'
             i++ // Skip next quote
           } else {
