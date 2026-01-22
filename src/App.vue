@@ -554,6 +554,66 @@
             </div>
           </div>
 
+          <!-- No Collection -->
+          <div
+            v-if="hasNoCollectionVerses"
+            @click="viewCollection('no-collection')"
+            class="bg-white rounded-2xl shadow-sm p-4 cursor-pointer active:scale-98 transition-all duration-200 border border-gray-100"
+          >
+            <div class="flex items-start justify-between">
+              <h3 class="text-lg font-semibold text-gray-800 flex-1">No Collection</h3>
+              <div class="flex items-center gap-2">
+                <span
+                  v-if="getCollectionDueCount('no-collection') > 0"
+                  class="px-2 py-0.5 text-xs font-medium text-red-700 bg-red-100 rounded-md"
+                >
+                  {{ getCollectionDueCount('no-collection') }}
+                </span>
+                <span
+                  v-else-if="getCollectionVerseCount('no-collection') > 0"
+                  class="px-2 py-0.5 text-xs font-medium text-green-700 bg-green-100 rounded-md"
+                >
+                  ✓
+                </span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <div class="text-xs text-gray-500">
+                {{ getCollectionVerseCount('no-collection') }} verse{{ getCollectionVerseCount('no-collection') !== 1 ? 's' : '' }}
+              </div>
+            </div>
+          </div>
+
+          <!-- To Learn -->
+          <div
+            v-if="hasToLearnVerses"
+            @click="viewCollection('to-learn')"
+            class="bg-white rounded-2xl shadow-sm p-4 cursor-pointer active:scale-98 transition-all duration-200 border border-gray-100"
+          >
+            <div class="flex items-start justify-between">
+              <h3 class="text-lg font-semibold text-gray-800 flex-1">To Learn</h3>
+              <div class="flex items-center gap-2">
+                <span
+                  v-if="getCollectionDueCount('to-learn') > 0"
+                  class="px-2 py-0.5 text-xs font-medium text-red-700 bg-red-100 rounded-md"
+                >
+                  {{ getCollectionDueCount('to-learn') }}
+                </span>
+                <span
+                  v-else-if="getCollectionVerseCount('to-learn') > 0"
+                  class="px-2 py-0.5 text-xs font-medium text-green-700 bg-green-100 rounded-md"
+                >
+                  ✓
+                </span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <div class="text-xs text-gray-500">
+                {{ getCollectionVerseCount('to-learn') }} verse{{ getCollectionVerseCount('to-learn') !== 1 ? 's' : '' }}
+              </div>
+            </div>
+          </div>
+
           <!-- User Collections -->
           <div
             v-for="collection in collections"
@@ -1666,6 +1726,16 @@ export default {
       }, 0)
     })
 
+    // Check if "No Collection" has any verses
+    const hasNoCollectionVerses = computed(() => {
+      return verses.value.some(v => !v.collectionIds || v.collectionIds.length === 0)
+    })
+
+    // Check if "To Learn" has any verses
+    const hasToLearnVerses = computed(() => {
+      return verses.value.some(v => v.memorizationStatus !== 'mastered')
+    })
+
     // Biblical book order for sorting
     const bookOrder = {
       // Old Testament
@@ -2636,6 +2706,14 @@ export default {
         if (currentCollectionId.value === 'master-list') {
           return verses.value
         }
+        // Handle "no-collection" - verses that don't belong to any collection
+        if (currentCollectionId.value === 'no-collection') {
+          return verses.value.filter(v => !v.collectionIds || v.collectionIds.length === 0)
+        }
+        // Handle "to-learn" - verses that are not yet mastered
+        if (currentCollectionId.value === 'to-learn') {
+          return verses.value.filter(v => v.memorizationStatus !== 'mastered')
+        }
         return verses.value.filter(v => v.collectionIds && v.collectionIds.includes(currentCollectionId.value))
       }
       return []
@@ -2645,6 +2723,12 @@ export default {
     const getCollectionName = (collectionId) => {
       if (collectionId === 'master-list') {
         return 'Master List'
+      }
+      if (collectionId === 'no-collection') {
+        return 'No Collection'
+      }
+      if (collectionId === 'to-learn') {
+        return 'To Learn'
       }
       const collection = collections.value.find(c => c.id === collectionId)
       return collection ? collection.name : 'Unknown'
@@ -2672,7 +2756,16 @@ export default {
 
     // Get verse count for a collection (accounts for verse ranges)
     const getCollectionVerseCount = (collectionId) => {
-      const collectionVerses = verses.value.filter(v => v.collectionIds && v.collectionIds.includes(collectionId))
+      let collectionVerses
+      if (collectionId === 'master-list') {
+        collectionVerses = verses.value
+      } else if (collectionId === 'no-collection') {
+        collectionVerses = verses.value.filter(v => !v.collectionIds || v.collectionIds.length === 0)
+      } else if (collectionId === 'to-learn') {
+        collectionVerses = verses.value.filter(v => v.memorizationStatus !== 'mastered')
+      } else {
+        collectionVerses = verses.value.filter(v => v.collectionIds && v.collectionIds.includes(collectionId))
+      }
       return collectionVerses.reduce((total, verse) => {
         return total + countVersesInReference(verse.reference)
       }, 0)
@@ -2680,11 +2773,17 @@ export default {
 
     // Get count of verses due for review in a collection
     const getCollectionDueCount = (collectionId) => {
-      return verses.value.filter(v => 
-        v.collectionIds && 
-        v.collectionIds.includes(collectionId) && 
-        isDueForReview(v)
-      ).length
+      let collectionVerses
+      if (collectionId === 'master-list') {
+        collectionVerses = verses.value
+      } else if (collectionId === 'no-collection') {
+        collectionVerses = verses.value.filter(v => !v.collectionIds || v.collectionIds.length === 0)
+      } else if (collectionId === 'to-learn') {
+        collectionVerses = verses.value.filter(v => v.memorizationStatus !== 'mastered')
+      } else {
+        collectionVerses = verses.value.filter(v => v.collectionIds && v.collectionIds.includes(collectionId))
+      }
+      return collectionVerses.filter(v => isDueForReview(v)).length
     }
 
     // Edit verse
@@ -3638,6 +3737,8 @@ export default {
       sortedVerses,
       dueVersesCount,
       totalVerseCount,
+      hasNoCollectionVerses,
+      hasToLearnVerses,
       isDueForReview,
       getDaysUntilReview,
       getTimeUntilReview,
