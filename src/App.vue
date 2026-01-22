@@ -689,58 +689,74 @@
               : 'border-yellow-200 bg-yellow-50'
           ]"
         >
-          <div class="flex justify-between">
-            <div class="flex-1 flex items-center gap-2">
-              <h3 class="text-lg font-semibold text-gray-800">
-                {{ verse.reference }}
-              </h3>
-              <span
-                v-if="verse.bibleVersion"
-                class="px-2 py-0.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-md uppercase tracking-wider"
+          <div class="flex gap-2 items-start">
+            <button
+              type="button"
+              @click="toggleVerseExpanded(verse, $event)"
+              class="shrink-0 mt-0.5 p-1 -ml-1 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-transform duration-200"
+              :class="{ 'rotate-90': isVerseExpanded(verse) }"
+              :aria-label="isVerseExpanded(verse) ? 'Collapse verse' : 'Expand verse'"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+            <div class="flex-1 min-w-0">
+              <div class="flex flex-wrap items-center gap-2 justify-between">
+                <div class="flex flex-wrap items-center gap-2 min-w-0">
+                  <h3 class="text-lg font-semibold text-gray-800">
+                    {{ verse.reference }}
+                  </h3>
+                  <span
+                    v-if="verse.bibleVersion"
+                    class="px-2 py-0.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-md uppercase tracking-wider"
+                  >
+                    {{ verse.bibleVersion }}
+                  </span>
+                </div>
+                  <div class="flex items-center">
+                    <span
+                      v-if="verse.memorizationStatus !== 'mastered'"
+                      :class="[
+                        'px-2 py-0.5 text-xs font-medium rounded-lg',
+                        verse.memorizationStatus === 'unmemorized'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : verse.memorizationStatus === 'learned'
+                          ? 'bg-orange-100 text-orange-800'
+                          : 'bg-purple-100 text-purple-800'
+                      ]"
+                    >
+                      {{ verse.memorizationStatus === 'unmemorized' ? 'Learn' : verse.memorizationStatus === 'learned' ? 'Memorize' : 'Master' }}
+                    </span>
+                    <span
+                      v-else-if="isDueForReview(verse)"
+                      class="px-2 py-0.5 text-xs font-medium text-red-700 bg-red-100 rounded-lg"
+                    >
+                      Due
+                    </span>
+                    <span
+                      v-else
+                      class="px-2 py-0.5 text-xs font-medium text-blue-700 bg-blue-100 rounded-lg"
+                    >
+                      {{ getTimeUntilReview(verse) }}
+                    </span>
+                                    <button
+                    @click.stop="startEditVerse(verse)"
+                    class="text-gray-600 hover:bg-gray-100 p-1.5 rounded-full shrink-0"
+                    title="Edit verse"
+                                    >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                                    </button>
+                  </div>
+              </div>
+              <div
+                v-if="isVerseExpanded(verse)"
+                class="mt-2 text-gray-600 text-sm leading-relaxed"
               >
-                {{ verse.bibleVersion }}
-              </span>
-            </div>
-
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <span
-                v-if="verse.memorizationStatus !== 'mastered'"
-                :class="[
-                  'px-2 py-0.5 text-xs font-medium rounded-lg',
-                  verse.memorizationStatus === 'unmemorized'
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : verse.memorizationStatus === 'learned'
-                    ? 'bg-orange-100 text-orange-800'
-                    : 'bg-purple-100 text-purple-800'
-                ]"
-              >
-                {{ verse.memorizationStatus === 'unmemorized' ? 'Learn' : verse.memorizationStatus === 'learned' ? 'Memorize' : 'Master' }}
-              </span>
-              <span
-                v-else-if="isDueForReview(verse)"
-                class="px-2 py-0.5 text-xs font-medium text-red-700 bg-red-100 rounded-lg"
-              >
-                Due
-              </span>
-              <span
-                v-else
-                class="px-2 py-0.5 text-xs font-medium text-blue-700 bg-blue-100 rounded-lg"
-              >
-                {{ getTimeUntilReview(verse) }}
-              </span>
-            </div>
-          </div>
-                      <div class="flex items-center gap-1">
-              <button
-                @click.stop="startEditVerse(verse)"
-                class="text-gray-600 hover:bg-gray-100 p-1.5 rounded-full"
-                title="Edit verse"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </button>
+                {{ verse.content }}
+              </div>
             </div>
           </div>
         </div>
@@ -1528,6 +1544,7 @@ export default {
     const csvPreview = ref([])
     const csvImportStatus = ref(null)
     const importingCSV = ref(false)
+    const expandedVerseIds = ref({})
 
     const newVerse = ref({
       reference: '',
@@ -2178,6 +2195,14 @@ export default {
         // Mastered - start review
         startReview(verse)
       }
+    }
+
+    const isVerseExpanded = (verse) => !!expandedVerseIds.value[verse.id]
+    const toggleVerseExpanded = (verse, e) => {
+      e.stopPropagation()
+      const next = { ...expandedVerseIds.value }
+      next[verse.id] = !next[verse.id]
+      expandedVerseIds.value = next
     }
 
     // Get time until review (or overdue) in a human-readable format
@@ -3911,6 +3936,8 @@ export default {
       getMemorizationStatus,
       getNextMemorizationMode,
       handleVerseClick,
+      isVerseExpanded,
+      toggleVerseExpanded,
       startMemorization,
       canSwitchToMode,
       switchToMemorizationMode,

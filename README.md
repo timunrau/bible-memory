@@ -42,7 +42,7 @@ A Progressive Web App for memorizing Bible verses, built with Vue.js and Tailwin
 For the list of verses on this page, export to CSV. Map it to columns as follows
 
 - Verse reference -> "Reference"
-- Verse content -> "Content"
+- Verse content -> "Content" (put quotations around the verse content)
 - Bible version -> "Version" (OTHER is BSB)
 - Due in x days -> "DaysUntilNextReview" (only add the number e.g., 54)
 - Review every x months -> "Interval" (only add the number, and convert to number of days)
