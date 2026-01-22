@@ -1473,7 +1473,7 @@ export default {
     const editingVerse = ref(null)
     const editingCollection = ref(null)
     const currentCollectionId = ref(null) // null = all verses, string = specific collection
-    const currentView = ref('review-list') // 'review-list' or 'collections'
+    const currentView = ref('collections') // 'review-list' or 'collections'
     const reviewingVerse = ref(null)
     const reviewSourceList = ref(null) // Track the source list when starting a review
     const reviewSourceState = ref(null) // Track the original source navigation state
@@ -1618,13 +1618,13 @@ export default {
       } else if (state.view === 'review' || state.view === 'memorization') {
         // If coming from review/memorization, try to determine the source view
         // If we have a collectionId, we came from a collection
-        // Otherwise, assume we came from review-list
+        // Otherwise, default to collections (home screen)
         if (!state.collectionId) {
-          currentView.value = 'review-list'
+          currentView.value = 'collections'
         }
       } else {
-        // Default to review-list if no view specified
-        currentView.value = 'review-list'
+        // Default to collections if no view specified
+        currentView.value = 'collections'
       }
       
       // Restore memorization or review view
@@ -1659,8 +1659,8 @@ export default {
       if (event.state) {
         restoreNavigationState(event.state)
       } else {
-        // If no state, restore to review-list view
-        restoreNavigationState({ view: 'review-list' })
+        // If no state, restore to collections view
+        restoreNavigationState({ view: 'collections' })
       }
     }
 
@@ -1680,8 +1680,8 @@ export default {
       } else if (viewParam === 'memorization' || viewParam === 'review') {
         // These are handled by restoreNavigationState
       } else {
-        // Default to review-list if no view param
-        currentView.value = 'review-list'
+        // Default to collections if no view param
+        currentView.value = 'collections'
       }
       
       const initialState = getNavigationState()
