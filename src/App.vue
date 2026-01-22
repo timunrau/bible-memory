@@ -2870,24 +2870,37 @@ export default {
       return collection ? collection.name : 'Unknown'
     }
 
-    // Count the number of verses from a reference string (handles ranges like "1:1-3")
+    // Count the number of verses from a reference string (handles ranges like "1:1-3" and comma-separated references like "5:11-12, 6:1-2")
     const countVersesInReference = (reference) => {
       if (!reference) return 0
       
-      // Match patterns like "Book Chapter:Verse" or "Book Chapter:StartVerse-EndVerse"
-      // Examples: "Psalm 1:1", "Psalm 1:1-3", "John 3:16-18"
-      const match = reference.match(/:(\d+)(?:-(\d+))?/i)
+      let totalCount = 0
       
-      if (match) {
-        const startVerse = parseInt(match[1], 10)
-        const endVerse = match[2] ? parseInt(match[2], 10) : startVerse
+      // Split by commas to handle multiple parts (e.g., "Hebrews 5:11-12, 6:1-2")
+      const parts = reference.split(',').map(part => part.trim())
+      
+      for (const part of parts) {
+        // Match patterns like "Chapter:Verse" or "Chapter:StartVerse-EndVerse"
+        // Examples: "5:11-12", "6:1-2", "1:1", "3:16-18"
+        // This pattern matches chapter:verse or chapter:startVerse-endVerse
+        const match = part.match(/(\d+):(\d+)(?:-(\d+))?/i)
         
-        // Return the count of verses in the range (inclusive)
-        return Math.max(1, endVerse - startVerse + 1)
+        if (match) {
+          const startVerse = parseInt(match[2], 10)
+          const endVerse = match[3] ? parseInt(match[3], 10) : startVerse
+          
+          // Add the count of verses in the range (inclusive)
+          totalCount += Math.max(1, endVerse - startVerse + 1)
+        } else {
+          // If no match in this part, assume it's a single verse
+          // This handles edge cases where a part doesn't match the pattern
+          totalCount += 1
+        }
       }
       
-      // If no match, assume it's a single verse
-      return 1
+      // If we found at least one match, return the total count
+      // Otherwise, assume it's a single verse (fallback for unexpected formats)
+      return totalCount > 0 ? totalCount : 1
     }
 
     // Get verse count for a collection (accounts for verse ranges)
