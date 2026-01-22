@@ -2997,14 +2997,14 @@ export default {
       if (!reviewSourceList.value) {
         // Store the original source state
         if (currentCollectionId.value) {
-          // Coming from a collection - store collection verses and state
-          reviewSourceList.value = getVersesForView()
+          // Coming from a collection - store sorted collection verses (what user sees)
+          reviewSourceList.value = sortedVerses.value
           reviewSourceState.value = {
             view: 'collection',
             collectionId: currentCollectionId.value
           }
         } else if (currentView.value === 'review-list') {
-          // Coming from review list - store review list verses and state
+          // Coming from review list - store review list verses (what user sees)
           reviewSourceList.value = reviewSortedVerses.value
           reviewSourceState.value = {
             view: 'review-list'
