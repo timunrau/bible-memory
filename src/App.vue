@@ -1479,6 +1479,7 @@ export default {
     const reviewSourceState = ref(null) // Track the original source navigation state
     const memorizingVerse = ref(null)
     const memorizationMode = ref(null) // 'learn', 'memorize', 'master'
+    const memorizationSourceState = ref(null) // Track the original source navigation state for memorization
     const reviewWords = ref([])
     const typedLetter = ref('')
     const reviewInput = ref(null)
@@ -2901,6 +2902,27 @@ export default {
       memorizationMode.value = mode
       reviewMistakes.value = 0
       
+      // Store the source state for navigation (only if not already set, to preserve it during mode advancement)
+      if (!memorizationSourceState.value) {
+        if (currentCollectionId.value) {
+          // Coming from a collection - store collection state
+          memorizationSourceState.value = {
+            view: 'collection',
+            collectionId: currentCollectionId.value
+          }
+        } else if (currentView.value === 'review-list') {
+          // Coming from review list - store review list state
+          memorizationSourceState.value = {
+            view: 'review-list'
+          }
+        } else if (currentView.value === 'collections') {
+          // Coming from collections view - store collections state
+          memorizationSourceState.value = {
+            view: 'collections'
+          }
+        }
+      }
+      
       // Split verse content into words by whitespace
       const words = verse.content.split(/\s+/).filter(word => word.trim().length > 0)
       
@@ -3132,20 +3154,45 @@ export default {
         }
       }
       
-      // Use browser back if not already handling a back button press
-      if (!isHandlingBackButton && window.history.length > 1) {
-        window.history.back()
-      } else {
-        // Fallback: manually restore state if no history
-        memorizingVerse.value = null
-        memorizationMode.value = null
-        reviewWords.value = []
-        typedLetter.value = ''
-        reviewMistakes.value = 0
-        
-        if (currentCollectionId.value) {
-          pushNavigationState({ view: 'collection', collectionId: currentCollectionId.value })
+      // Get the source state before clearing it
+      const sourceState = memorizationSourceState.value
+      
+      // Clear source tracking
+      memorizationSourceState.value = null
+      
+      // Reset memorization state
+      memorizingVerse.value = null
+      memorizationMode.value = null
+      reviewWords.value = []
+      typedLetter.value = ''
+      reviewMistakes.value = 0
+      
+      // Navigate to source state
+      if (sourceState) {
+        if (sourceState.collectionId) {
+          currentCollectionId.value = sourceState.collectionId
+          pushNavigationState({ view: 'collection', collectionId: sourceState.collectionId })
+        } else if (sourceState.view === 'review-list') {
+          currentCollectionId.value = null
+          currentView.value = 'review-list'
+          pushNavigationState({ view: 'review-list' })
+        } else if (sourceState.view === 'collections') {
+          currentCollectionId.value = null
+          currentView.value = 'collections'
+          pushNavigationState({ view: 'collections' })
         } else {
+          // Fallback
+          currentCollectionId.value = null
+          currentView.value = 'review-list'
+          pushNavigationState({ view: 'review-list' })
+        }
+      } else {
+        // Fallback: use browser back if available, otherwise go to collections
+        if (!isHandlingBackButton && window.history.length > 1) {
+          window.history.back()
+        } else {
+          currentCollectionId.value = null
+          currentView.value = 'collections'
           pushNavigationState({ view: 'collections' })
         }
       }
