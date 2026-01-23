@@ -1532,6 +1532,7 @@ export default {
     const reviewTextContainer = ref(null)
     const memorizationScrollContainer = ref(null)
     const reviewMistakes = ref(0) // Track mistakes during review
+    const currentReviewSaved = ref(false) // Track if current review has been saved
     const testingConnection = ref(false)
     const syncStatus = ref(null)
     const syncing = ref(false)
@@ -1689,12 +1690,47 @@ export default {
         }
       } else {
         // Exit memorization/review if we're going back
+        // Save review before exiting if it was completed successfully
+        if (reviewingVerse.value && !currentReviewSaved.value && allWordsRevealed.value && meetsAccuracyRequirement.value) {
+          const verse = verses.value.find(v => v.id === reviewingVerse.value.id)
+          if (verse) {
+            const totalWords = reviewWords.value.length
+            const grade = calculateGrade(totalWords, reviewMistakes.value)
+            
+            // Calculate next review date and update ease factor
+            // Pass isNewReview=true to ensure we always calculate a new date for this review
+            const reviewData = calculateNextReviewDate(verse, grade, true)
+            
+            verse.reviewCount = (verse.reviewCount || 0) + 1
+            verse.lastReviewed = new Date().toISOString()
+            verse.nextReviewDate = reviewData.nextReviewDate
+            verse.easeFactor = reviewData.easeFactor
+            verse.interval = reviewData.interval
+            verse.lastGrade = grade
+            verse.lastAccuracy = ((totalWords - reviewMistakes.value) / totalWords * 100).toFixed(1)
+            verse.lastModified = new Date().toISOString()
+            
+            // Track review history
+            if (!verse.reviewHistory) verse.reviewHistory = []
+            verse.reviewHistory.push({
+              date: new Date().toISOString(),
+              grade: grade,
+              accuracy: parseFloat(verse.lastAccuracy),
+              mistakes: reviewMistakes.value
+            })
+            
+            currentReviewSaved.value = true
+            saveVerses()
+          }
+        }
+        
         memorizingVerse.value = null
         memorizationMode.value = null
         reviewingVerse.value = null
         reviewWords.value = []
         typedLetter.value = ''
         reviewMistakes.value = 0
+        currentReviewSaved.value = false
       }
       
       // Use nextTick to ensure DOM updates before resetting flag
@@ -1999,7 +2035,43 @@ export default {
 
     // Save verses to local storage
     const saveVerses = () => {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(verses.value))
+      console.log('[saveVerses] Saving verses to localStorage', {
+        totalVerses: verses.value.length,
+        timestamp: new Date().toISOString()
+      })
+      
+      // Find the verse we just updated to verify it's in the array
+      const reviewingId = reviewingVerse.value?.id
+      if (reviewingId) {
+        const verseToCheck = verses.value.find(v => v.id === reviewingId)
+        console.log('[saveVerses] Verse being saved', {
+          id: verseToCheck?.id,
+          reference: verseToCheck?.reference,
+          lastReviewed: verseToCheck?.lastReviewed,
+          reviewCount: verseToCheck?.reviewCount,
+          interval: verseToCheck?.interval
+        })
+      }
+      
+      const serialized = JSON.stringify(verses.value)
+      localStorage.setItem(STORAGE_KEY, serialized)
+      
+      // Verify what was actually saved
+      const saved = localStorage.getItem(STORAGE_KEY)
+      if (saved && reviewingId) {
+        try {
+          const parsed = JSON.parse(saved)
+          const savedVerse = parsed.find((v) => v.id === reviewingId)
+          console.log('[saveVerses] Verified saved data', {
+            found: !!savedVerse,
+            lastReviewed: savedVerse?.lastReviewed,
+            reviewCount: savedVerse?.reviewCount
+          })
+        } catch (e) {
+          console.error('[saveVerses] Error parsing saved data', e)
+        }
+      }
+      
       // Trigger sync after save
       triggerSync()
     }
@@ -2096,13 +2168,14 @@ export default {
     }
 
     // Calculate next review date using SM-2-inspired algorithm with shorter intervals
-    const calculateNextReviewDate = (verse, grade) => {
+    const calculateNextReviewDate = (verse, grade, isNewReview = false) => {
       const now = new Date()
       let interval = 0
       let newEF = verse.easeFactor || 2.5
       
-      // If reviewed today, don't advance the interval - keep the same next review date
-      if (wasReviewedToday(verse) && verse.nextReviewDate) {
+      // If reviewed today (and this is NOT a new review), don't advance the interval - keep the same next review date
+      // When isNewReview is true, we're actively reviewing now, so always calculate a new date
+      if (!isNewReview && wasReviewedToday(verse) && verse.nextReviewDate) {
         return {
           nextReviewDate: verse.nextReviewDate,
           easeFactor: newEF,
@@ -3128,8 +3201,42 @@ export default {
         return
       }
       
+      // IMPORTANT: Before starting a new review, ensure any previous review was saved
+      // This handles the case where nextVerse() was called but save didn't complete
+      if (reviewingVerse.value && !currentReviewSaved.value && allWordsRevealed.value && meetsAccuracyRequirement.value) {
+        console.log('[startReview] Saving previous review before starting new one')
+        const prevVerse = verses.value.find(v => v.id === reviewingVerse.value.id)
+        if (prevVerse) {
+          const totalWords = reviewWords.value.length
+          const grade = calculateGrade(totalWords, reviewMistakes.value)
+          const reviewData = calculateNextReviewDate(prevVerse, grade, true)
+          
+          prevVerse.reviewCount = (prevVerse.reviewCount || 0) + 1
+          prevVerse.lastReviewed = new Date().toISOString()
+          prevVerse.nextReviewDate = reviewData.nextReviewDate
+          prevVerse.easeFactor = reviewData.easeFactor
+          prevVerse.interval = reviewData.interval
+          prevVerse.lastGrade = grade
+          prevVerse.lastAccuracy = ((totalWords - reviewMistakes.value) / totalWords * 100).toFixed(1)
+          prevVerse.lastModified = new Date().toISOString()
+          
+          if (!prevVerse.reviewHistory) prevVerse.reviewHistory = []
+          prevVerse.reviewHistory.push({
+            date: new Date().toISOString(),
+            grade: grade,
+            accuracy: parseFloat(prevVerse.lastAccuracy),
+            mistakes: reviewMistakes.value
+          })
+          
+          currentReviewSaved.value = true
+          saveVerses()
+          console.log('[startReview] Previous review saved', { lastReviewed: prevVerse.lastReviewed })
+        }
+      }
+      
       reviewingVerse.value = verse
       reviewMistakes.value = 0 // Reset mistake counter
+      currentReviewSaved.value = false // Reset saved flag for new review
       
       // Store the source list and state for navigation (only if not already set, to preserve it during sequential navigation)
       const isSequentialNavigation = !!reviewSourceList.value
@@ -3358,18 +3465,50 @@ export default {
 
     // Move to next verse for review
     const nextVerse = () => {
+      console.log('[nextVerse] Called', {
+        hasReviewingVerse: !!reviewingVerse.value,
+        verseId: reviewingVerse.value?.id,
+        verseReference: reviewingVerse.value?.reference
+      })
+      
       if (reviewingVerse.value) {
-        // Save current review first (only if accuracy requirement is met)
+        // Save current review first (only if accuracy requirement is met and not already saved)
         const verse = verses.value.find(v => v.id === reviewingVerse.value.id)
-        if (verse && allWordsRevealed.value && meetsAccuracyRequirement.value) {
+        
+        console.log('[nextVerse] Verse lookup', {
+          found: !!verse,
+          verseId: verse?.id,
+          currentReviewSaved: currentReviewSaved.value,
+          allWordsRevealed: allWordsRevealed.value,
+          meetsAccuracyRequirement: meetsAccuracyRequirement.value,
+          accuracy: accuracy.value,
+          reviewMistakes: reviewMistakes.value,
+          totalWords: reviewWords.value.length,
+          lastReviewedBefore: verse?.lastReviewed
+        })
+        
+        if (verse && !currentReviewSaved.value && allWordsRevealed.value && meetsAccuracyRequirement.value) {
+          console.log('[nextVerse] Entering save block')
+          
           const totalWords = reviewWords.value.length
           const grade = calculateGrade(totalWords, reviewMistakes.value)
           
           // Calculate next review date and update ease factor
-          const reviewData = calculateNextReviewDate(verse, grade)
+          // Pass isNewReview=true to ensure we always calculate a new date for this review
+          const reviewData = calculateNextReviewDate(verse, grade, true)
+          
+          const newLastReviewed = new Date().toISOString()
+          
+          console.log('[nextVerse] Before update', {
+            reviewCount: verse.reviewCount,
+            lastReviewed: verse.lastReviewed,
+            nextReviewDate: verse.nextReviewDate,
+            interval: verse.interval,
+            easeFactor: verse.easeFactor
+          })
           
           verse.reviewCount = (verse.reviewCount || 0) + 1
-          verse.lastReviewed = new Date().toISOString()
+          verse.lastReviewed = newLastReviewed
           verse.nextReviewDate = reviewData.nextReviewDate
           verse.easeFactor = reviewData.easeFactor
           verse.interval = reviewData.interval
@@ -3386,7 +3525,56 @@ export default {
             mistakes: reviewMistakes.value
           })
           
+          console.log('[nextVerse] After update', {
+            reviewCount: verse.reviewCount,
+            lastReviewed: verse.lastReviewed,
+            newLastReviewed: newLastReviewed,
+            nextReviewDate: verse.nextReviewDate,
+            interval: verse.interval,
+            easeFactor: verse.easeFactor,
+            lastGrade: verse.lastGrade,
+            lastAccuracy: verse.lastAccuracy,
+            reviewHistoryLength: verse.reviewHistory.length
+          })
+          
+          currentReviewSaved.value = true // Mark as saved to prevent duplicate saves
+          
+          console.log('[nextVerse] Calling saveVerses()')
           saveVerses()
+          
+          // Verify after save
+          const savedVerse = verses.value.find(v => v.id === verse.id)
+          console.log('[nextVerse] After saveVerses()', {
+            lastReviewed: savedVerse?.lastReviewed,
+            matches: savedVerse?.lastReviewed === newLastReviewed
+          })
+          
+          // Double-check localStorage directly
+          setTimeout(() => {
+            const stored = localStorage.getItem(STORAGE_KEY)
+            if (stored) {
+              try {
+                const parsed = JSON.parse(stored)
+                const storedVerse = parsed.find(v => v.id === verse.id)
+                console.log('[nextVerse] localStorage verification (after 100ms)', {
+                  found: !!storedVerse,
+                  lastReviewed: storedVerse?.lastReviewed,
+                  matches: storedVerse?.lastReviewed === newLastReviewed,
+                  verseId: verse.id,
+                  reference: verse.reference
+                })
+              } catch (e) {
+                console.error('[nextVerse] Error parsing localStorage', e)
+              }
+            }
+          }, 100)
+        } else {
+          console.log('[nextVerse] NOT saving - conditions not met', {
+            hasVerse: !!verse,
+            currentReviewSaved: currentReviewSaved.value,
+            allWordsRevealed: allWordsRevealed.value,
+            meetsAccuracyRequirement: meetsAccuracyRequirement.value
+          })
         }
         
         // Find next verse in the source list
@@ -3414,25 +3602,53 @@ export default {
           }
         } else {
           // No more verses in source list, exit review
+          console.log('[nextVerse] No more verses, calling exitReview()')
           exitReview()
         }
+      } else {
+        console.log('[nextVerse] No reviewingVerse.value, cannot proceed')
       }
     }
 
     // Exit review mode
     const exitReview = () => {
-      // Mark verse as reviewed if all words were revealed and accuracy requirement is met
-      if (reviewingVerse.value && allWordsRevealed.value && meetsAccuracyRequirement.value) {
+      console.log('[exitReview] Called', {
+        hasReviewingVerse: !!reviewingVerse.value,
+        verseId: reviewingVerse.value?.id,
+        verseReference: reviewingVerse.value?.reference,
+        currentReviewSaved: currentReviewSaved.value,
+        allWordsRevealed: allWordsRevealed.value,
+        meetsAccuracyRequirement: meetsAccuracyRequirement.value
+      })
+      
+      // Mark verse as reviewed if all words were revealed and accuracy requirement is met (and not already saved)
+      if (reviewingVerse.value && !currentReviewSaved.value && allWordsRevealed.value && meetsAccuracyRequirement.value) {
         const verse = verses.value.find(v => v.id === reviewingVerse.value.id)
+        console.log('[exitReview] Saving review', {
+          found: !!verse,
+          verseId: verse?.id,
+          lastReviewedBefore: verse?.lastReviewed
+        })
+        
         if (verse) {
           const totalWords = reviewWords.value.length
           const grade = calculateGrade(totalWords, reviewMistakes.value)
           
           // Calculate next review date and update ease factor
-          const reviewData = calculateNextReviewDate(verse, grade)
+          // Pass isNewReview=true to ensure we always calculate a new date for this review
+          const reviewData = calculateNextReviewDate(verse, grade, true)
+          
+          const newLastReviewed = new Date().toISOString()
+          
+          console.log('[exitReview] Before update', {
+            reviewCount: verse.reviewCount,
+            lastReviewed: verse.lastReviewed,
+            nextReviewDate: verse.nextReviewDate,
+            interval: verse.interval
+          })
           
           verse.reviewCount = (verse.reviewCount || 0) + 1
-          verse.lastReviewed = new Date().toISOString()
+          verse.lastReviewed = newLastReviewed
           verse.nextReviewDate = reviewData.nextReviewDate
           verse.easeFactor = reviewData.easeFactor
           verse.interval = reviewData.interval
@@ -3449,8 +3665,36 @@ export default {
             mistakes: reviewMistakes.value
           })
           
+          console.log('[exitReview] After update', {
+            reviewCount: verse.reviewCount,
+            lastReviewed: verse.lastReviewed,
+            newLastReviewed: newLastReviewed
+          })
+          
+          currentReviewSaved.value = true // Mark as saved to prevent duplicate saves
+          
+          console.log('[exitReview] Calling saveVerses()')
           saveVerses()
+          
+          // Verify after save
+          const savedVerse = verses.value.find(v => v.id === verse.id)
+          console.log('[exitReview] After saveVerses()', {
+            lastReviewed: savedVerse?.lastReviewed,
+            matches: savedVerse?.lastReviewed === newLastReviewed
+          })
+        } else {
+          console.log('[exitReview] NOT saving - conditions not met', {
+            hasReviewingVerse: !!reviewingVerse.value,
+            currentReviewSaved: currentReviewSaved.value,
+            allWordsRevealed: allWordsRevealed.value,
+            meetsAccuracyRequirement: meetsAccuracyRequirement.value
+          })
         }
+      } else {
+        console.log('[exitReview] No review to save', {
+          hasReviewingVerse: !!reviewingVerse.value,
+          currentReviewSaved: currentReviewSaved.value
+        })
       }
       
       // Navigate back to the source state (collection or review list)
@@ -3466,6 +3710,7 @@ export default {
       reviewWords.value = []
       typedLetter.value = ''
       reviewMistakes.value = 0
+      currentReviewSaved.value = false
       
       // Navigate to source state
       if (sourceState) {
@@ -3668,7 +3913,10 @@ export default {
     // WebDAV sync functions
     const triggerSync = async (showFeedback = false) => {
       // Don't sync if already syncing or if WebDAV not configured
-      if (syncing.value) return
+      if (syncing.value) {
+        console.log('[triggerSync] Already syncing, skipping')
+        return
+      }
       
       const settings = getWebDAVSettings()
       if (!settings || !settings.url || !settings.username || !settings.password) {
@@ -3676,7 +3924,21 @@ export default {
           syncError.value = 'WebDAV not configured. Please configure it in settings.'
           setTimeout(() => { syncError.value = null }, 5000)
         }
+        console.log('[triggerSync] WebDAV not configured, skipping')
         return
+      }
+      
+      // Track which verse we're reviewing before sync (if any)
+      const reviewingId = reviewingVerse.value?.id
+      let reviewingVerseBeforeSync = null
+      if (reviewingId) {
+        reviewingVerseBeforeSync = verses.value.find(v => v.id === reviewingId)
+        console.log('[triggerSync] Before sync - reviewing verse state', {
+          id: reviewingVerseBeforeSync?.id,
+          reference: reviewingVerseBeforeSync?.reference,
+          lastReviewed: reviewingVerseBeforeSync?.lastReviewed,
+          reviewCount: reviewingVerseBeforeSync?.reviewCount
+        })
       }
       
       syncing.value = true
@@ -3688,21 +3950,58 @@ export default {
         if (result.success) {
           // Update local data with merged data from sync
           if (result.verses) {
-            console.log('[App] Sync complete - updating verses:', result.verses.length, 'local verses before:', verses.value.length)
+            console.log('[triggerSync] Sync complete - updating verses:', result.verses.length, 'local verses before:', verses.value.length)
+            
+            // Check if our reviewing verse was affected by merge
+            if (reviewingId) {
+              const mergedVerse = result.verses.find(v => v.id === reviewingId)
+              console.log('[triggerSync] After merge - reviewing verse state', {
+                id: mergedVerse?.id,
+                reference: mergedVerse?.reference,
+                lastReviewed: mergedVerse?.lastReviewed,
+                reviewCount: mergedVerse?.reviewCount,
+                lastReviewedChanged: mergedVerse?.lastReviewed !== reviewingVerseBeforeSync?.lastReviewed,
+                lastReviewedOlder: mergedVerse?.lastReviewed && reviewingVerseBeforeSync?.lastReviewed && 
+                  new Date(mergedVerse.lastReviewed) < new Date(reviewingVerseBeforeSync.lastReviewed)
+              })
+              
+              // If merge overwrote our new lastReviewed with an older one, keep the newer one
+              if (mergedVerse && reviewingVerseBeforeSync && 
+                  mergedVerse.lastReviewed && reviewingVerseBeforeSync.lastReviewed &&
+                  new Date(mergedVerse.lastReviewed) < new Date(reviewingVerseBeforeSync.lastReviewed)) {
+                console.warn('[triggerSync] WARNING: Merge overwrote newer lastReviewed! Keeping newer value.', {
+                  merged: mergedVerse.lastReviewed,
+                  local: reviewingVerseBeforeSync.lastReviewed
+                })
+                mergedVerse.lastReviewed = reviewingVerseBeforeSync.lastReviewed
+                mergedVerse.lastModified = reviewingVerseBeforeSync.lastModified || new Date().toISOString()
+              }
+            }
+            
             // Log a sample of merged verses for debugging (especially those with review dates)
             if (result.verses.length > 0) {
               const versesWithReview = result.verses.filter(v => v.nextReviewDate)
-              console.log(`[App] Verses with nextReviewDate: ${versesWithReview.length}`)
+              console.log(`[triggerSync] Verses with nextReviewDate: ${versesWithReview.length}`)
               if (versesWithReview.length > 0) {
                 const sample = versesWithReview.slice(0, 3)
                 sample.forEach(v => {
-                  console.log(`[App] Merged verse ${v.id} (${v.reference}): nextReviewDate=${v.nextReviewDate}, interval=${v.interval}, lastModified=${v.lastModified}`)
+                  console.log(`[triggerSync] Merged verse ${v.id} (${v.reference}): nextReviewDate=${v.nextReviewDate}, interval=${v.interval}, lastModified=${v.lastModified}, lastReviewed=${v.lastReviewed}`)
                 })
               }
             }
             // Update verses array - create new array reference for Vue reactivity
             verses.value = [...result.verses]
             localStorage.setItem(STORAGE_KEY, JSON.stringify(verses.value))
+            
+            // Verify the reviewing verse after update
+            if (reviewingId) {
+              const finalVerse = verses.value.find(v => v.id === reviewingId)
+              console.log('[triggerSync] Final state - reviewing verse', {
+                id: finalVerse?.id,
+                lastReviewed: finalVerse?.lastReviewed,
+                reviewCount: finalVerse?.reviewCount
+              })
+            }
             
             // Force Vue to update by using nextTick and verify the update
             await nextTick()
@@ -3711,6 +4010,19 @@ export default {
             if (result.verses.length > 0) {
               const versesWithReview = result.verses.filter(v => v.nextReviewDate)
               console.log(`[App] Verifying ${versesWithReview.length} verses with nextReviewDate`)
+              
+              // Check the reviewing verse specifically if it exists
+              if (reviewingId) {
+                const reviewingVerseAfterSync = verses.value.find(v => v.id === reviewingId)
+                const mergedVerse = result.verses.find(v => v.id === reviewingId)
+                console.log('[triggerSync] Reviewing verse after sync update', {
+                  id: reviewingVerseAfterSync?.id,
+                  reference: reviewingVerseAfterSync?.reference,
+                  lastReviewed: reviewingVerseAfterSync?.lastReviewed,
+                  mergedLastReviewed: mergedVerse?.lastReviewed,
+                  matches: reviewingVerseAfterSync?.lastReviewed === mergedVerse?.lastReviewed
+                })
+              }
               
               let allMatch = true
               versesWithReview.slice(0, 5).forEach(testVerse => {
@@ -3726,10 +4038,23 @@ export default {
                 }
               })
               
-              // Double-check by reading from localStorage
+              // Double-check by reading from localStorage - specifically check reviewing verse
               const stored = localStorage.getItem(STORAGE_KEY)
               if (stored) {
                 const storedVerses = JSON.parse(stored)
+                
+                // Check reviewing verse specifically
+                if (reviewingId) {
+                  const storedReviewingVerse = storedVerses.find(v => v.id === reviewingId)
+                  const inMemoryVerse = verses.value.find(v => v.id === reviewingId)
+                  console.log('[triggerSync] localStorage verification for reviewing verse', {
+                    id: reviewingId,
+                    storedLastReviewed: storedReviewingVerse?.lastReviewed,
+                    inMemoryLastReviewed: inMemoryVerse?.lastReviewed,
+                    matches: storedReviewingVerse?.lastReviewed === inMemoryVerse?.lastReviewed
+                  })
+                }
+                
                 const storedVerse = storedVerses.find(v => v.id === versesWithReview[0]?.id)
                 if (storedVerse && versesWithReview[0]) {
                   const localStorageMatch = storedVerse.nextReviewDate === versesWithReview[0].nextReviewDate
@@ -3905,6 +4230,69 @@ export default {
       }
     }
 
+    // Helper function to check verse data (can be called from console)
+    window.checkVerseData = (verseIdOrReference) => {
+      const verse = typeof verseIdOrReference === 'string' && verseIdOrReference.includes('-')
+        ? verses.value.find(v => v.id === verseIdOrReference)
+        : verses.value.find(v => v.reference.toLowerCase().includes(verseIdOrReference.toLowerCase()))
+      
+      if (!verse) {
+        console.log('Verse not found:', verseIdOrReference)
+        return null
+      }
+      
+      const stored = localStorage.getItem(STORAGE_KEY)
+      let storedVerse = null
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored)
+          storedVerse = parsed.find(v => v.id === verse.id)
+        } catch (e) {
+          console.error('Error parsing localStorage', e)
+        }
+      }
+      
+      const result = {
+        id: verse.id,
+        reference: verse.reference,
+        inMemory: {
+          lastReviewed: verse.lastReviewed,
+          lastModified: verse.lastModified,
+          reviewCount: verse.reviewCount,
+          interval: verse.interval,
+          nextReviewDate: verse.nextReviewDate
+        },
+        inLocalStorage: storedVerse ? {
+          lastReviewed: storedVerse.lastReviewed,
+          lastModified: storedVerse.lastModified,
+          reviewCount: storedVerse.reviewCount,
+          interval: storedVerse.interval,
+          nextReviewDate: storedVerse.nextReviewDate
+        } : null,
+        matches: storedVerse ? verse.lastReviewed === storedVerse.lastReviewed : false
+      }
+      
+      console.log('=== Verse Data Check ===')
+      console.log('Reference:', result.reference)
+      console.log('ID:', result.id)
+      console.log('In Memory - lastReviewed:', result.inMemory.lastReviewed)
+      console.log('In Memory - lastModified:', result.inMemory.lastModified)
+      console.log('In Memory - reviewCount:', result.inMemory.reviewCount)
+      if (result.inLocalStorage) {
+        console.log('In localStorage - lastReviewed:', result.inLocalStorage.lastReviewed)
+        console.log('In localStorage - lastModified:', result.inLocalStorage.lastModified)
+        console.log('In localStorage - reviewCount:', result.inLocalStorage.reviewCount)
+        console.log('Values match:', result.matches)
+        if (!result.matches) {
+          console.warn('⚠️ MISMATCH: Memory and localStorage have different lastReviewed values!')
+        }
+      } else {
+        console.warn('⚠️ Verse not found in localStorage!')
+      }
+      console.log('Full object:', result)
+      return result
+    }
+    
     // Load verses on mount
     onMounted(async () => {
       loadCollections()

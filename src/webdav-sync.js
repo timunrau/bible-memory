@@ -433,9 +433,17 @@ function mergeData(localVerses, localCollections, remoteData) {
       verseMap.set(verse.id, { ...verse, source: 'remote' })
     } else {
       // Conflict: intelligently merge verses considering memorization completeness
-      // Prefer lastModified, then lastReviewed, then createdAt, fallback to empty string for comparison
-      const localLastModified = existing.lastModified || existing.lastReviewed || existing.createdAt || ''
-      const remoteLastModified = verse.lastModified || verse.lastReviewed || verse.createdAt || ''
+      // For recently reviewed verses, prioritize lastReviewed over lastModified
+      // Compare lastReviewed first if both exist, then fall back to lastModified, then createdAt
+      const localLastReviewed = existing.lastReviewed || ''
+      const remoteLastReviewed = verse.lastReviewed || ''
+      const localLastModified = existing.lastModified || existing.createdAt || ''
+      const remoteLastModified = verse.lastModified || verse.createdAt || ''
+      
+      // Use lastReviewed for comparison if either has it (recent review is most important)
+      // Otherwise use lastModified
+      const localTimestamp = localLastReviewed || localLastModified
+      const remoteTimestamp = remoteLastReviewed || remoteLastModified
       
       // Check memorization completeness
       const remoteHasMemorization = verse.nextReviewDate && verse.interval > 0
@@ -443,8 +451,8 @@ function mergeData(localVerses, localCollections, remoteData) {
       
       // Log merge decision for debugging
       console.log(`[WebDAV] Merging verse ${verse.id} (${verse.reference}):`)
-      console.log(`[WebDAV]   Local: lastModified=${localLastModified}, hasMemorization=${localHasMemorization}, interval=${existing.interval || 0}, nextReviewDate=${existing.nextReviewDate || 'none'}`)
-      console.log(`[WebDAV]   Remote: lastModified=${remoteLastModified}, hasMemorization=${remoteHasMemorization}, interval=${verse.interval || 0}, nextReviewDate=${verse.nextReviewDate || 'none'}`)
+      console.log(`[WebDAV]   Local: lastReviewed=${localLastReviewed || 'none'}, lastModified=${localLastModified || 'none'}, hasMemorization=${localHasMemorization}, interval=${existing.interval || 0}, nextReviewDate=${existing.nextReviewDate || 'none'}`)
+      console.log(`[WebDAV]   Remote: lastReviewed=${remoteLastReviewed || 'none'}, lastModified=${remoteLastModified || 'none'}, hasMemorization=${remoteHasMemorization}, interval=${verse.interval || 0}, nextReviewDate=${verse.nextReviewDate || 'none'}`)
       
       let useRemote = false
       let reason = ''
@@ -454,33 +462,86 @@ function mergeData(localVerses, localCollections, remoteData) {
         useRemote = true
         reason = 'remote has memorization progress that local lacks'
       }
-      // Priority 2: If both have memorization, compare by interval (longer = more mature/reviewed)
+      // Priority 2: If both have memorization, prioritize newer timestamp (recent review)
+      // CRITICAL: Always prioritize lastReviewed if it exists, as it indicates a recent review
+      // Special case: If local was reviewed today, always keep local (prevents overwriting fresh reviews)
       else if (remoteHasMemorization && localHasMemorization) {
-        if (verse.interval > existing.interval) {
-          useRemote = true
-          reason = `remote has longer interval (${verse.interval} vs ${existing.interval})`
-        } else if (verse.interval === existing.interval && remoteLastModified > localLastModified) {
-          useRemote = true
-          reason = `same interval but remote has newer timestamp`
-        } else {
+        // Check if local was reviewed today
+        const now = new Date()
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        const localReviewedToday = localLastReviewed && new Date(localLastReviewed) >= today
+        const remoteReviewedToday = remoteLastReviewed && new Date(remoteLastReviewed) >= today
+        
+        // If local was reviewed today but remote wasn't, always keep local
+        if (localReviewedToday && !remoteReviewedToday) {
           useRemote = false
-          reason = `local has longer or equal interval (${existing.interval} vs ${verse.interval})`
+          reason = `local was reviewed today (${localLastReviewed}), keeping local version`
+        }
+        // If remote was reviewed today but local wasn't, use remote
+        else if (remoteReviewedToday && !localReviewedToday) {
+          useRemote = true
+          reason = `remote was reviewed today (${remoteLastReviewed}), using remote version`
+        }
+        // Both reviewed today or neither, compare timestamps
+        else {
+          // Compare timestamps first - newer timestamp means more recent review
+          if (localTimestamp && remoteTimestamp) {
+            const localTime = new Date(localTimestamp).getTime()
+            const remoteTime = new Date(remoteTimestamp).getTime()
+            const timeDiff = Math.abs(localTime - remoteTime)
+            const oneMinute = 60 * 1000
+            
+            // If timestamps differ by more than 1 minute, use the newer one
+            if (timeDiff > oneMinute) {
+              if (remoteTime > localTime) {
+                useRemote = true
+                reason = `remote has newer timestamp (${remoteTimestamp} vs ${localTimestamp})`
+              } else {
+                useRemote = false
+                reason = `local has newer timestamp (${localTimestamp} vs ${remoteTimestamp})`
+              }
+            } else {
+              // Timestamps are very close (within 1 minute), use interval as tiebreaker
+              if (verse.interval > existing.interval) {
+                useRemote = true
+                reason = `timestamps close, remote has longer interval (${verse.interval} vs ${existing.interval})`
+              } else {
+                useRemote = false
+                reason = `timestamps close, local has longer or equal interval (${existing.interval} vs ${verse.interval})`
+              }
+            }
+          } else if (remoteTimestamp && !localTimestamp) {
+            useRemote = true
+            reason = 'remote has timestamp but local does not'
+          } else if (!remoteTimestamp && localTimestamp) {
+            useRemote = false
+            reason = 'local has timestamp but remote does not'
+          } else {
+            // Neither has timestamp, use interval
+            if (verse.interval > existing.interval) {
+              useRemote = true
+              reason = `no timestamps, remote has longer interval (${verse.interval} vs ${existing.interval})`
+            } else {
+              useRemote = false
+              reason = `no timestamps, local has longer or equal interval (${existing.interval} vs ${verse.interval})`
+            }
+          }
         }
       }
       // Priority 3: Use timestamp comparison for other cases
       else {
-        if (remoteLastModified && localLastModified) {
-          if (remoteLastModified > localLastModified) {
+        if (remoteTimestamp && localTimestamp) {
+          if (remoteTimestamp > localTimestamp) {
             useRemote = true
-            reason = 'remote has newer timestamp'
+            reason = `remote has newer timestamp (${remoteTimestamp} vs ${localTimestamp})`
           } else {
             useRemote = false
-            reason = 'local has newer timestamp'
+            reason = `local has newer timestamp (${localTimestamp} vs ${remoteTimestamp})`
           }
-        } else if (remoteLastModified && !localLastModified) {
+        } else if (remoteTimestamp && !localTimestamp) {
           useRemote = true
           reason = 'remote has timestamp but local does not'
-        } else if (!remoteLastModified && localLastModified) {
+        } else if (!remoteTimestamp && localTimestamp) {
           useRemote = false
           reason = 'local has timestamp but remote does not'
         } else {
