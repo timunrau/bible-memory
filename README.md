@@ -13,7 +13,7 @@ A Progressive Web App for memorizing Bible verses, built with Vue.js and Tailwin
 - Hosted at https://bible-memory.unrau.xyz
 
 ## To Do
-- [ ] Add a better app icon
+- [x] Add a better app icon
 - [ ] Make the verse review screen automatically scroll as you're typing out long verses
 
 ## Wishlist

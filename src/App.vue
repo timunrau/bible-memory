@@ -672,6 +672,57 @@
         </div>
       </div>
 
+      <!-- Search View -->
+      <div v-if="currentView === 'search' && !currentCollectionId" class="">
+        <div class="px-4 py-4">
+          <!-- Search Input -->
+          <div class="relative mb-4">
+            <input
+              v-model="searchQuery"
+              type="text"
+              placeholder="Search verses..."
+              class="w-full px-4 py-3 pl-12 pr-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-gray-900"
+            />
+            <svg class="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+
+          <!-- Search Results -->
+          <div class="space-y-3 overflow-y-auto" style="max-height: calc(100vh - 12rem);">
+            <div
+              v-for="result in searchResults"
+              :key="result.item.id"
+              @click="handleVerseClick(result.item)"
+              class="bg-white rounded-2xl shadow-sm py-3 px-4 border border-gray-200 transition-all duration-200 cursor-pointer active:scale-98"
+            >
+              <div class="flex flex-col gap-2">
+                <h3 class="text-lg font-semibold text-gray-800" v-html="highlightText(result.item.reference, result.matches, 'reference')"></h3>
+                <p class="text-gray-600 text-sm leading-relaxed" v-html="highlightText(result.item.content, result.matches, 'content')"></p>
+              </div>
+            </div>
+
+            <!-- Empty state when no search query -->
+            <div v-if="!searchQuery.trim()" class="bg-white rounded-2xl shadow-sm p-12 text-center mt-8">
+              <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <p class="text-gray-500 text-lg">Search verses</p>
+              <p class="text-gray-400 text-sm mt-2">Type to search by reference or content</p>
+            </div>
+
+            <!-- Empty state when no results found -->
+            <div v-else-if="searchQuery.trim() && searchResults.length === 0" class="bg-white rounded-2xl shadow-sm p-12 text-center mt-8">
+              <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p class="text-gray-500 text-lg">No results found</p>
+              <p class="text-gray-400 text-sm mt-2">Try different search terms</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Collection View -->
       <div v-if="currentCollectionId">
         <!-- Verse List -->
@@ -807,12 +858,28 @@
           </svg>
           <span class="text-xs font-medium">Collections</span>
         </button>
+        
+        <!-- Search Tab -->
+        <button
+          @click="navigateToSearch"
+          :class="[
+            'flex flex-col items-center justify-center flex-1 h-full transition-colors',
+            currentView === 'search'
+              ? 'text-blue-600'
+              : 'text-gray-500'
+          ]"
+        >
+          <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <span class="text-xs font-medium">Search</span>
+        </button>
       </div>
     </nav>
 
     <!-- Floating Action Button with Menu -->
     <div 
-      v-if="!memorizingVerse && !reviewingVerse && currentView !== 'review-list'"
+      v-if="!memorizingVerse && !reviewingVerse && currentView !== 'review-list' && currentView !== 'search'"
       :class="[
         'fixed right-6 z-30',
         !currentCollectionId
@@ -891,7 +958,7 @@
 
     <!-- Backdrop to close menu when clicking outside -->
     <div
-      v-if="fabMenuOpen && !memorizingVerse && !reviewingVerse && currentView !== 'review-list'"
+      v-if="fabMenuOpen && !memorizingVerse && !reviewingVerse && currentView !== 'review-list' && currentView !== 'search'"
       @click="fabMenuOpen = false"
       class="fixed inset-0 z-20"
     ></div>
@@ -1495,6 +1562,7 @@ Romans 8:28,"And we know that in all things...",ESV,30,60</pre>
 
 <script>
 import { ref, onMounted, onBeforeUnmount, computed, nextTick } from 'vue'
+import Fuse from 'fuse.js'
 import { 
   getWebDAVSettings, 
   saveWebDAVSettings, 
@@ -1519,7 +1587,8 @@ export default {
     const editingVerse = ref(null)
     const editingCollection = ref(null)
     const currentCollectionId = ref(null) // null = all verses, string = specific collection
-    const currentView = ref('collections') // 'review-list' or 'collections'
+    const currentView = ref('collections') // 'review-list', 'collections', or 'search'
+    const searchQuery = ref('')
     const reviewingVerse = ref(null)
     const reviewSourceList = ref(null) // Track the source list when starting a review
     const reviewSourceState = ref(null) // Track the original source navigation state
@@ -1659,9 +1728,9 @@ export default {
         currentCollectionId.value = null
       }
       
-      // Restore main view (review-list or collections) before starting review/memorization
+      // Restore main view (review-list, collections, or search) before starting review/memorization
       // so that startReview can determine the correct source list
-      if (state.view === 'review-list' || state.view === 'collections') {
+      if (state.view === 'review-list' || state.view === 'collections' || state.view === 'search') {
         currentView.value = state.view
       } else if (state.view === 'collection') {
         // Collection view is handled above
@@ -1755,7 +1824,7 @@ export default {
       const urlParams = new URLSearchParams(window.location.search)
       const viewParam = urlParams.get('view')
       
-      if (viewParam === 'review-list' || viewParam === 'collections') {
+      if (viewParam === 'review-list' || viewParam === 'collections' || viewParam === 'search') {
         currentView.value = viewParam
       } else if (viewParam === 'collection') {
         const collectionId = urlParams.get('collection')
@@ -1944,6 +2013,39 @@ export default {
         // Then by verse
         return aParsed.verse - bParsed.verse
       })
+    })
+
+    // Initialize Fuse.js for fuzzy search
+    const fuseOptions = {
+      keys: [
+        { name: 'reference', weight: 0.4 },
+        { name: 'content', weight: 0.6 }
+      ],
+      threshold: 0.4, // 0.0 = exact match, 1.0 = match anything
+      includeMatches: true,
+      includeScore: true,
+      minMatchCharLength: 1
+    }
+    
+    // Create Fuse instance (will be recreated when verses change)
+    const getFuseInstance = () => {
+      return new Fuse(verses.value, fuseOptions)
+    }
+
+    // Search results using Fuse.js
+    const searchResults = computed(() => {
+      if (!searchQuery.value.trim()) {
+        return []
+      }
+      
+      const fuse = getFuseInstance()
+      const results = fuse.search(searchQuery.value)
+      
+      return results.map(result => ({
+        item: result.item,
+        matches: result.matches || [],
+        score: result.score
+      }))
     })
 
     // Sort verses by next review date (closest first) for review list
@@ -3185,6 +3287,46 @@ export default {
       pushNavigationState({ view: 'collections' })
     }
 
+    // Navigate to search view
+    const navigateToSearch = () => {
+      currentCollectionId.value = null
+      currentView.value = 'search'
+      pushNavigationState({ view: 'search' })
+    }
+
+    // Highlight matching text in search results
+    const highlightText = (text, matches, fieldName) => {
+      if (!matches || matches.length === 0) {
+        return escapeHtml(text)
+      }
+      
+      // Find matches for this specific field
+      const fieldMatch = matches.find(m => m.key === fieldName)
+      if (!fieldMatch || !fieldMatch.indices || fieldMatch.indices.length === 0) {
+        return escapeHtml(text)
+      }
+      
+      // Sort indices by start position (descending) to avoid index shifting issues
+      const sortedIndices = [...fieldMatch.indices].sort((a, b) => b[0] - a[0])
+      
+      let highlightedText = text
+      sortedIndices.forEach(([start, end]) => {
+        const before = highlightedText.substring(0, start)
+        const match = highlightedText.substring(start, end + 1)
+        const after = highlightedText.substring(end + 1)
+        highlightedText = before + '<mark class="bg-yellow-200">' + escapeHtml(match) + '</mark>' + after
+      })
+      
+      return highlightedText
+    }
+
+    // Escape HTML to prevent XSS
+    const escapeHtml = (text) => {
+      const div = document.createElement('div')
+      div.textContent = text
+      return div.innerHTML
+    }
+
     // View all verses (back from collection view)
     const viewAllVerses = () => {
       currentCollectionId.value = null
@@ -3541,6 +3683,10 @@ export default {
           currentCollectionId.value = null
           currentView.value = 'collections'
           pushNavigationState({ view: 'collections' })
+        } else if (sourceState.view === 'search') {
+          currentCollectionId.value = null
+          currentView.value = 'search'
+          pushNavigationState({ view: 'search' })
         } else {
           // Fallback
           currentCollectionId.value = null
@@ -3835,6 +3981,10 @@ export default {
           currentCollectionId.value = null
           currentView.value = 'review-list'
           pushNavigationState({ view: 'review-list' })
+        } else if (sourceState.view === 'search') {
+          currentCollectionId.value = null
+          currentView.value = 'search'
+          pushNavigationState({ view: 'search' })
         } else {
           // Fallback
           currentCollectionId.value = null
@@ -4584,6 +4734,10 @@ export default {
       reviewSortedVerses,
       navigateToReviewList,
       navigateToCollections,
+      navigateToSearch,
+      searchQuery,
+      searchResults,
+      highlightText,
       startEditVerse,
       saveEditedVerse,
       closeEditVerseForm,

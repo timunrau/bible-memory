@@ -14,7 +14,8 @@
     "webdav": "^5.8.0",
     "cors": "^2.8.5",
     "express": "^5.2.1",
-    "http-proxy-middleware": "^3.0.5"
+    "http-proxy-middleware": "^3.0.5",
+    "fuse.js": "^7.0.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.0",
