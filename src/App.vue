@@ -247,6 +247,16 @@
           {{ reviewingVerse.reference }}
         </h1>
         <div class="flex items-center gap-1 ml-1">
+          <!-- Share Button -->
+          <button
+            @click="copyVerse(reviewingVerse)"
+            class="p-2 text-gray-700 active:bg-gray-100 rounded-full transition-colors"
+            title="Share verse"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+            </svg>
+          </button>
           <!-- Sync Button -->
           <button
             @click="manualSync"
@@ -694,10 +704,21 @@
               v-for="result in searchResults"
               :key="result.item.id"
               @click="handleVerseClick(result.item)"
-              class="bg-white rounded-2xl shadow-sm py-3 px-4 border border-gray-200 transition-all duration-200 cursor-pointer active:scale-98"
+              class="bg-white rounded-2xl shadow-sm py-3 px-4 border border-gray-200 transition-all duration-200 cursor-pointer active:scale-98 relative"
             >
               <div class="flex flex-col gap-2">
-                <h3 class="text-lg font-semibold text-gray-800" v-html="highlightText(result.item.reference, result.matches, 'reference')"></h3>
+                <div class="flex items-start justify-between gap-2">
+                  <h3 class="text-lg font-semibold text-gray-800 flex-1" v-html="highlightText(result.item.reference, result.matches, 'reference')"></h3>
+                  <button
+                    @click.stop="copyVerse(result.item)"
+                    class="text-gray-500 hover:text-gray-700 p-1.5 rounded-full hover:bg-gray-100 transition-colors shrink-0"
+                    title="Share verse"
+                  >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                    </svg>
+                  </button>
+                </div>
                 <p class="text-gray-600 text-sm leading-relaxed" v-html="highlightText(result.item.content, result.matches, 'content')"></p>
               </div>
             </div>
@@ -963,6 +984,25 @@
       class="fixed inset-0 z-20"
     ></div>
   </div>
+
+  <!-- Copy Toast Notification - rendered at root level to appear above all screens -->
+  <transition name="toast">
+    <div
+      v-if="copyToast.show"
+      class="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-[100] px-4 py-3 rounded-xl shadow-lg max-w-sm"
+      :class="copyToast.isError ? 'bg-red-600 text-white' : 'bg-green-600 text-white'"
+    >
+      <div class="flex items-center gap-2">
+        <svg v-if="!copyToast.isError" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+        <span class="text-sm font-medium">{{ copyToast.message }}</span>
+      </div>
+    </div>
+  </transition>
 
       <!-- Add Verse Form Modal -->
       <div
@@ -1607,6 +1647,7 @@ export default {
     const syncing = ref(false)
     const syncSuccess = ref(false)
     const syncError = ref(null)
+    const shareSuccess = ref(false)
     const fabMenuOpen = ref(false)
     const csvFileInput = ref(null)
     const csvTextarea = ref(null)
@@ -1615,6 +1656,7 @@ export default {
     const csvImportStatus = ref(null)
     const importingCSV = ref(false)
     const expandedVerseIds = ref({})
+    const copyToast = ref({ show: false, message: '' })
 
     const newVerse = ref({
       reference: '',
@@ -3327,6 +3369,53 @@ export default {
       return div.innerHTML
     }
 
+    // Copy verse to clipboard in the format: content\nreference
+    const copyVerse = async (verse) => {
+      // Handle Vue refs - if verse is a ref, get its value
+      let verseObj = verse
+      if (verse && typeof verse === 'object' && 'value' !== undefined && Object.prototype.hasOwnProperty.call(verse, 'value')) {
+        verseObj = verse.value
+      }
+      
+      if (!verseObj || !verseObj.content || !verseObj.reference) {
+        console.error('No verse provided to copyVerse', verse, verseObj)
+        showCopyToast('Error: No verse to copy', true)
+        return
+      }
+      
+      const textToCopy = `${verseObj.content}\n${verseObj.reference}`
+      
+      try {
+        await navigator.clipboard.writeText(textToCopy)
+        showCopyToast('Verse copied to clipboard')
+      } catch (err) {
+        console.error('Failed to copy verse:', err)
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea')
+        textArea.value = textToCopy
+        textArea.style.position = 'fixed'
+        textArea.style.opacity = '0'
+        document.body.appendChild(textArea)
+        textArea.select()
+        try {
+          document.execCommand('copy')
+          showCopyToast('Verse copied to clipboard')
+        } catch (fallbackErr) {
+          console.error('Fallback copy failed:', fallbackErr)
+          showCopyToast('Failed to copy verse', true)
+        }
+        document.body.removeChild(textArea)
+      }
+    }
+
+    // Show copy toast notification
+    const showCopyToast = (message, isError = false) => {
+      copyToast.value = { show: true, message, isError }
+      setTimeout(() => {
+        copyToast.value.show = false
+      }, 2000)
+    }
+
     // View all verses (back from collection view)
     const viewAllVerses = () => {
       currentCollectionId.value = null
@@ -4738,6 +4827,8 @@ export default {
       searchQuery,
       searchResults,
       highlightText,
+      copyVerse,
+      copyToast,
       startEditVerse,
       saveEditedVerse,
       closeEditVerseForm,
@@ -4754,6 +4845,7 @@ export default {
       syncSuccess,
       syncError,
       syncing,
+      shareSuccess,
       showImportCSV,
       csvFileInput,
       csvPreview,
