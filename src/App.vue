@@ -82,7 +82,7 @@
               v-if="memorizationMode === 'learn'"
               :class="word.revealed ? (word.incorrect ? 'text-red-600 font-semibold' : 'text-gray-900 font-semibold') : 'text-gray-300'"
             >
-              {{ word.text }}
+              {{ word.revealed ? word.text : (getWordDisplayText(word) || word.text) }}
             </span>
             <span
               v-else-if="memorizationMode === 'memorize'"
@@ -94,7 +94,7 @@
                 {{ word.text }}
               </span>
               <span v-else class="text-gray-300">
-                {{ '_'.repeat(word.text.length) }}
+                {{ getWordDisplayText(word) || '_'.repeat(word.text.length) }}
               </span>
             </span>
             <span
@@ -104,7 +104,7 @@
                 {{ word.text }}
               </span>
               <span v-else class="text-gray-300">
-                {{ '_'.repeat(word.text.length) }}
+                {{ getWordDisplayText(word) || '_'.repeat(word.text.length) }}
               </span>
             </span>
           </span>
@@ -309,7 +309,7 @@
                 {{ word.text }}
               </span>
               <span v-else class="text-gray-300">
-                {{ '_'.repeat(word.text.length) }}
+                {{ getWordDisplayText(word) || '_'.repeat(word.text.length) }}
               </span>
             </span>
           </div>
@@ -2112,6 +2112,106 @@ export default {
       return qwertyLayout[letter.toLowerCase()] || []
     }
 
+    // Extract required letters from a word (handles hyphenated words)
+    // For "peace-loving", returns ["p", "l"]
+    // For "hello", returns ["h"]
+    const getRequiredLetters = (word) => {
+      // Handle various hyphen/dash characters: regular hyphen, en-dash, em-dash
+      // Split by any type of dash/hyphen character
+      const parts = word.split(/[-–—]/)
+      const requiredLetters = []
+      
+      for (const part of parts) {
+        // Trim whitespace and find the first alphabetic character (skip punctuation at the start)
+        const trimmedPart = part.trim()
+        if (trimmedPart.length > 0) {
+          const firstLetterMatch = trimmedPart.match(/[a-zA-Z]/)
+          if (firstLetterMatch) {
+            requiredLetters.push(firstLetterMatch[0].toLowerCase())
+          }
+        }
+      }
+      
+      // Fallback: if no letters found, use first character
+      if (requiredLetters.length === 0) {
+        const firstChar = word.trim().charAt(0)
+        if (firstChar) {
+          requiredLetters.push(firstChar.toLowerCase())
+        }
+      }
+      
+      return requiredLetters
+    }
+
+    // Split word into parts by hyphens and get the separator characters
+    // Returns { parts: ["peace", "loving"], separators: ["-"] }
+    const splitWordParts = (word) => {
+      // Find all hyphen/dash characters and their positions
+      const separators = []
+      const parts = []
+      let lastIndex = 0
+      
+      // Match hyphens, en-dashes, and em-dashes
+      const separatorRegex = /[-–—]/g
+      let match
+      
+      while ((match = separatorRegex.exec(word)) !== null) {
+        parts.push(word.substring(lastIndex, match.index))
+        separators.push(match[0])
+        lastIndex = match.index + match[0].length
+      }
+      parts.push(word.substring(lastIndex))
+      
+      return { parts, separators }
+    }
+
+    // Get partial word text based on how many letters have been typed
+    // For "peace-loving" with typedLettersIndex=1, returns "peace-"
+    // For "peace-loving" with typedLettersIndex=2, returns "peace-loving"
+    const getPartialWordText = (word) => {
+      if (!word.requiredLetters || word.requiredLetters.length <= 1) {
+        // Not a hyphenated word
+        return ''
+      }
+      
+      const typedLettersIndex = word.typedLettersIndex || 0
+      
+      // If all letters typed, return full word
+      if (typedLettersIndex >= word.requiredLetters.length) {
+        return word.text
+      }
+      
+      // If no letters typed yet, return empty (will show underscores)
+      if (typedLettersIndex === 0) {
+        return ''
+      }
+      
+      // Use stored parts and separators, or compute them if not available
+      let parts = word.parts
+      let separators = word.separators
+      if (!parts || !separators) {
+        const split = splitWordParts(word.text)
+        parts = split.parts
+        separators = split.separators
+      }
+      
+      // Build partial text up to the current part
+      let partialText = ''
+      for (let i = 0; i < typedLettersIndex && i < parts.length; i++) {
+        if (i > 0 && separators[i - 1]) {
+          partialText += separators[i - 1] // Add separator before this part
+        }
+        partialText += parts[i]
+      }
+      
+      // Add separator after the last revealed part if there are more parts
+      if (typedLettersIndex < parts.length && separators.length > 0 && separators[typedLettersIndex - 1]) {
+        partialText += separators[typedLettersIndex - 1]
+      }
+      
+      return partialText
+    }
+
     // Check if typed letter is correct or adjacent (fuzzy typing)
     const isLetterMatch = (typedLetter, correctLetter) => {
       const typed = typedLetter.toLowerCase()
@@ -3140,9 +3240,12 @@ export default {
       const words = verse.content.split(/\s+/).filter(word => word.trim().length > 0)
       
       reviewWords.value = words.map((word, index) => {
-        // Find the first alphabetic character (skip punctuation at the start)
-        const firstLetterMatch = word.match(/[a-zA-Z]/)
-        const firstLetter = firstLetterMatch ? firstLetterMatch[0].toLowerCase() : word.charAt(0).toLowerCase()
+        // Get all required letters (handles hyphenated words like "peace-loving")
+        const requiredLetters = getRequiredLetters(word)
+        // Keep firstLetter for backward compatibility
+        const firstLetter = requiredLetters[0]
+        // Store word parts for progressive display
+        const { parts, separators } = splitWordParts(word)
         
         let revealed = false
         let visible = false
@@ -3167,6 +3270,10 @@ export default {
           revealed: revealed,
           visible: visible,
           firstLetter: firstLetter,
+          requiredLetters: requiredLetters,
+          typedLettersIndex: 0, // Track which letter in the sequence we're on
+          parts: parts,
+          separators: separators,
           index: index,
           incorrect: false
         }
@@ -3280,14 +3387,21 @@ export default {
       // Split verse content into words by whitespace
       const words = verse.content.split(/\s+/).filter(word => word.trim().length > 0)
       reviewWords.value = words.map(word => {
-        // Find the first alphabetic character (skip punctuation at the start)
-        const firstLetterMatch = word.match(/[a-zA-Z]/)
-        const firstLetter = firstLetterMatch ? firstLetterMatch[0].toLowerCase() : word.charAt(0).toLowerCase()
+        // Get all required letters (handles hyphenated words like "peace-loving")
+        const requiredLetters = getRequiredLetters(word)
+        // Keep firstLetter for backward compatibility
+        const firstLetter = requiredLetters[0]
+        // Store word parts for progressive display
+        const { parts, separators } = splitWordParts(word)
         
         return {
           text: word,
           revealed: false,
           firstLetter: firstLetter,
+          requiredLetters: requiredLetters,
+          typedLettersIndex: 0, // Track which letter in the sequence we're on
+          parts: parts,
+          separators: separators,
           incorrect: false
         }
       })
@@ -3869,23 +3983,90 @@ export default {
       if (nextWordIndex !== -1) {
         const nextWord = reviewWords.value[nextWordIndex]
         
-        // Check if the letter matches the first letter of the next word (with fuzzy typing)
-        if (isLetterMatch(letter, nextWord.firstLetter)) {
-          // Correct letter (exact or adjacent) - reveal the word normally
+        // Get the current required letter (for hyphenated words, this advances through the sequence)
+        // If requiredLetters is not set, compute it from the word text
+        let requiredLetters = nextWord.requiredLetters
+        if (!requiredLetters || requiredLetters.length === 0) {
+          requiredLetters = getRequiredLetters(nextWord.text)
+          // Update the word object with the computed requiredLetters
+          nextWord.requiredLetters = requiredLetters
+          // Also compute and store parts and separators if not already set
+          if (!nextWord.parts || !nextWord.separators) {
+            const split = splitWordParts(nextWord.text)
+            nextWord.parts = split.parts
+            nextWord.separators = split.separators
+          }
+        }
+        // Fallback to firstLetter if still no letters
+        if (!requiredLetters || requiredLetters.length === 0) {
+          requiredLetters = [nextWord.firstLetter || nextWord.text.charAt(0).toLowerCase()]
+        }
+        
+        const currentLetterIndex = nextWord.typedLettersIndex || 0
+        
+        // Safety check: ensure we have a valid required letter
+        if (currentLetterIndex >= requiredLetters.length) {
+          // Already completed all letters, mark as revealed and move on
           nextWord.revealed = true
           nextWord.incorrect = false
           if (memorizationMode.value === 'learn' || memorizationMode.value === 'memorize') {
-            nextWord.visible = true // Make it visible in learn/memorize modes
+            nextWord.visible = true
           }
           typedLetter.value = ''
-          
-          // Auto-scroll to next word and focus input
           nextTick(() => {
             scrollToCurrentWord()
             if (reviewInput.value) {
               reviewInput.value.focus()
             }
           })
+          return
+        }
+        
+        const currentRequiredLetter = requiredLetters[currentLetterIndex]
+        
+        // Safety check: ensure currentRequiredLetter is valid
+        if (!currentRequiredLetter) {
+          // Fallback: mark word as revealed if we can't determine required letter
+          nextWord.revealed = true
+          nextWord.incorrect = false
+          typedLetter.value = ''
+          return
+        }
+        
+        // Check if the letter matches the current required letter (with fuzzy typing)
+        if (isLetterMatch(letter, currentRequiredLetter)) {
+          // Correct letter - advance to next letter in sequence
+          nextWord.typedLettersIndex = currentLetterIndex + 1
+          
+          // Check if all required letters have been typed
+          if (nextWord.typedLettersIndex >= requiredLetters.length) {
+            // All letters typed - reveal the word normally
+            nextWord.revealed = true
+            nextWord.incorrect = false
+            if (memorizationMode.value === 'learn' || memorizationMode.value === 'memorize') {
+              nextWord.visible = true // Make it visible in learn/memorize modes
+            }
+            typedLetter.value = ''
+            
+            // Auto-scroll to next word and focus input
+            nextTick(() => {
+              scrollToCurrentWord()
+              if (reviewInput.value) {
+                reviewInput.value.focus()
+              }
+            })
+          } else {
+            // More letters needed - clear input and wait for next letter
+            typedLetter.value = ''
+            
+            // Auto-scroll to current word and focus input
+            nextTick(() => {
+              scrollToCurrentWord()
+              if (reviewInput.value) {
+                reviewInput.value.focus()
+              }
+            })
+          }
         } else {
           // Wrong letter (not correct and not adjacent) - reveal the word but mark it as incorrect
           nextWord.revealed = true
@@ -4230,6 +4411,25 @@ export default {
       }
     }
 
+    // Get display text for a word (shows partial text for hyphenated words)
+    const getWordDisplayText = (word) => {
+      // If word is fully revealed, show full text
+      if (word.revealed) {
+        return word.text
+      }
+      
+      // If word has required letters and is partially typed, show partial text
+      if (word.requiredLetters && word.requiredLetters.length > 1) {
+        const typedLettersIndex = word.typedLettersIndex || 0
+        if (typedLettersIndex > 0) {
+          return getPartialWordText(word)
+        }
+      }
+      
+      // Otherwise return empty string (will be replaced with underscores)
+      return ''
+    }
+
     // Helper function to check verse data (can be called from console)
     window.checkVerseData = (verseIdOrReference) => {
       const verse = typeof verseIdOrReference === 'string' && verseIdOrReference.includes('-')
@@ -4352,6 +4552,7 @@ export default {
       focusInput,
       handleKeyPress,
       checkLetter,
+      getWordDisplayText,
       accuracy,
       meetsAccuracyRequirement,
       collections,
