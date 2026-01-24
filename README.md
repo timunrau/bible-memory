@@ -1,35 +1,54 @@
 # Bible Memory PWA
 
-A Progressive Web App for memorizing Bible verses, built with Vue.js and Tailwind CSS.
+A Progressive Web App for memorizing Bible verses using spaced repetition and progressive memorization techniques.
+
+Hosted at https://bible-memory.unrau.xyz
+
+## Privacy & Data Storage
+
+**Your data stays on your device.** All verses, progress, and review history are stored locally in your browser's storage. No cloud services or third-party servers are involved.
+
+You can:
+- **Backup manually** to a JSON file that you control
+- **Sync with your own WebDAV server** (like Nextcloud) for multi-device access
+- **Import from CSV** to migrate from other memorization apps
+
+Your memorization data is private and under your control.
+
+## How It Works
+
+**Spaced Repetition System**
+
+Uses a modified SM-2 algorithm to schedule reviews at optimal intervals. Reviews start at 1 day and extend up to 90 days based on your performance. Each verse is graded 0-5 based on accuracy, and the algorithm automatically adjusts the next review date and ease factor.
+
+**Progressive Learning (Learn → Memorize → Master)**
+
+The app guides you through three memorization stages, each requiring 90% accuracy to advance:
+
+- **Learn**: All words visible but muted. Type first letters to reveal and begin learning.
+- **Memorize**: Every other word hidden. Type first letters of hidden words to practice recall.
+- **Master**: All words hidden. Type first letters to reveal the complete verse from memory.
+
+Once a verse is mastered, it enters the spaced repetition review cycle.
+
+**First-Letter Typing**
+
+Instead of typing complete words, you type just the first letter of each word to reveal it. This approach engages active recall while keeping the memorization process fast and efficient. The system supports hyphenated words (requiring first letter of each part) and includes fuzzy typing for adjacent QWERTY keys.
 
 ## Features
 
-- View your list of saved verses
-- Add new verses with reference and content
-- Data persists in local storage
-- PWA support for offline use
-- CSV import
-- WebDAV sync
-- Hosted at https://bible-memory.unrau.xyz
+- Intelligent spaced repetition with adaptive scheduling (1-90 day intervals)
+- Three-stage progressive memorization system
+- First-letter typing with fuzzy key support and real-time accuracy tracking
+- Review grading system (0-5) based on performance
+- Custom collections to organize verses by topic or study plan
+- Fuzzy search by reference or content
+- Full backup/restore and CSV import with preview
+- WebDAV sync for cloud backup and multi-device use
+- Complete review history for each verse
+- PWA support for offline use and installation on any device
 
-## To Do
-- [x] Add a better app icon
-- [ ] Make the verse review screen automatically scroll as you're typing out long verses
 
-## Wishlist
-### Verse Review
-- [x] Fuzzy typing: typing a letter near the correct letter should count as correct (for mobile use)
-- [x] Vibrate if I get a word wrong
-- [x] If I get a word wrong, still reveal the next word but make the text red
-- [x] Minimum 90% accuracy in order to count as being reviewed. If I get less than 80% accuracy, change what the modal says, and make retry the primary call to action. 
-- [x] Show my accuracy and all that on the modal that popups up after reviewing the verse, instead of on the screen where I'm typing
-
-### Other
-- [x] backup and import
-- [x] Two way sync with a webdav folder. Sync on every change of anything. When I connect a blank copy of the app to a webdav folder that already has bible memory data in it, import everything.
-- [x] Set bible version on the verse
-- [x] Installable PWA
-- [x] Search for a verse by reference
 
 
 
