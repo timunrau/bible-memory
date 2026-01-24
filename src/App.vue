@@ -19,9 +19,10 @@
         <h1 class="text-xl font-semibold text-gray-900 flex-1">
           {{ memorizingVerse.reference }}
         </h1>
-        <div class="flex items-center gap-1 ml-1">
+        <div class="flex items-center gap-1 ml-1 relative">
           <!-- Sync Button -->
           <button
+            v-if="hasWebDAVConfigured"
             @click="manualSync"
             :disabled="syncing"
             class="p-2 text-gray-700 active:bg-gray-100 rounded-full transition-colors relative"
@@ -60,6 +61,48 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
           </button>
+              <!-- Settings Button -->
+          <div class="relative">
+            <button
+              ref="settingsButton"
+              @click.stop="toggleSettingsMenu"
+              class="p-2 text-gray-700 active:bg-gray-100 rounded-full transition-colors relative"
+              title="Settings"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <!-- Reminder dot -->
+              <span
+                v-if="shouldShowBackupReminder"
+                class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"
+              ></span>
+            </button>
+            <!-- Settings Menu Dropdown -->
+            <div
+              v-if="showSettingsMenu"
+              v-click-outside="closeSettingsMenu"
+              class="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50"
+            >
+              <button
+                @click="openWebDAVSettings"
+                class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+              >
+                WebDAV Sync
+              </button>
+              <button
+                @click="openBackupImport"
+                class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 transition-colors relative"
+              >
+                Backup/Import
+                <span
+                  v-if="shouldShowBackupReminder"
+                  class="absolute right-3 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-red-500 rounded-full"
+                ></span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </header>
@@ -259,6 +302,7 @@
           </button>
           <!-- Sync Button -->
           <button
+            v-if="hasWebDAVConfigured"
             @click="manualSync"
             :disabled="syncing"
             class="p-2 text-gray-700 active:bg-gray-100 rounded-full transition-colors relative"
@@ -297,6 +341,48 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
           </button>
+              <!-- Settings Button -->
+          <div class="relative">
+            <button
+              ref="settingsButton"
+              @click.stop="toggleSettingsMenu"
+              class="p-2 text-gray-700 active:bg-gray-100 rounded-full transition-colors relative"
+              title="Settings"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <!-- Reminder dot -->
+              <span
+                v-if="shouldShowBackupReminder"
+                class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"
+              ></span>
+            </button>
+            <!-- Settings Menu Dropdown -->
+            <div
+              v-if="showSettingsMenu"
+              v-click-outside="closeSettingsMenu"
+              class="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50"
+            >
+              <button
+                @click="openWebDAVSettings"
+                class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+              >
+                WebDAV Sync
+              </button>
+              <button
+                @click="openBackupImport"
+                class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 transition-colors relative"
+              >
+                Backup/Import
+                <span
+                  v-if="shouldShowBackupReminder"
+                  class="absolute right-3 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-red-500 rounded-full"
+                ></span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </header>
@@ -407,9 +493,10 @@
         <h1 class="text-xl font-semibold text-gray-900 flex-1 ml-2" :class="{ 'mr-20': !currentCollectionId || currentCollectionId }">
           {{ currentCollectionId ? getCollectionName(currentCollectionId) : (currentView === 'review-list' ? 'Review' : (currentView === 'search' ? 'Search' : 'Collections')) }}
         </h1>
-        <div class="flex items-center gap-1 ml-1">
+        <div class="flex items-center gap-1 ml-1 relative">
           <!-- Sync Button -->
           <button
+            v-if="hasWebDAVConfigured"
             @click="manualSync"
             :disabled="syncing"
             class="p-2 text-gray-700 active:bg-gray-100 rounded-full transition-colors relative"
@@ -448,17 +535,48 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
           </button>
-          <!-- Settings Button -->
-          <button
-            @click="showSettings = true"
-            class="p-2 text-gray-700 active:bg-gray-100 rounded-full transition-colors"
-            title="Settings"
-          >
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </button>
+              <!-- Settings Button -->
+          <div class="relative">
+            <button
+              ref="settingsButton"
+              @click.stop="toggleSettingsMenu"
+              class="p-2 text-gray-700 active:bg-gray-100 rounded-full transition-colors relative"
+              title="Settings"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <!-- Reminder dot -->
+              <span
+                v-if="shouldShowBackupReminder"
+                class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"
+              ></span>
+            </button>
+            <!-- Settings Menu Dropdown -->
+            <div
+              v-if="showSettingsMenu"
+              v-click-outside="closeSettingsMenu"
+              class="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50"
+            >
+              <button
+                @click="openWebDAVSettings"
+                class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+              >
+                WebDAV Sync
+              </button>
+              <button
+                @click="openBackupImport"
+                class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 transition-colors relative"
+              >
+                Backup/Import
+                <span
+                  v-if="shouldShowBackupReminder"
+                  class="absolute right-3 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-red-500 rounded-full"
+                ></span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </header>
@@ -1641,6 +1759,71 @@ Romans 8:28,"And we know that in all things...",ESV,30,60</pre>
           </form>
         </div>
       </div>
+
+      <!-- Backup/Import Modal -->
+      <div
+        v-if="showBackupImport"
+        class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+        @click.self="closeBackupImport"
+      >
+        <div class="bg-white rounded-3xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+          <h2 class="text-2xl font-bold text-gray-900 mb-6">Backup & Import</h2>
+          
+          <div class="space-y-6">
+            <!-- Last Backup Info -->
+            <div class="bg-gray-50 rounded-xl p-4">
+              <p class="text-sm text-gray-600 mb-1">Last backup:</p>
+              <p class="text-lg font-medium text-gray-900">{{ getTimeSinceLastBackup() }}</p>
+            </div>
+
+            <!-- Backup Section -->
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900 mb-3">Backup All Data</h3>
+              <p class="text-sm text-gray-600 mb-4">
+                Download a backup file containing all your verses, collections, and settings.
+              </p>
+              <button
+                @click="backupAllData"
+                class="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors duration-200"
+              >
+                Download Backup
+              </button>
+            </div>
+
+            <!-- Import Section -->
+            <div class="border-t border-gray-200 pt-6">
+              <h3 class="text-lg font-semibold text-gray-900 mb-3">Import from Backup</h3>
+              <p class="text-sm text-gray-600 mb-4">
+                Restore your data from a previously saved backup file. This will replace all your current data.
+              </p>
+              <input
+                type="file"
+                accept=".json"
+                @change="handleBackupFileSelect"
+                class="hidden"
+                ref="backupFileInput"
+                id="backup-file-input"
+              />
+              <label
+                for="backup-file-input"
+                class="block w-full px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold text-center cursor-pointer transition-colors duration-200"
+              >
+                Choose Backup File
+              </label>
+            </div>
+
+            <!-- Close Button -->
+            <div class="flex justify-end pt-4">
+              <button
+                @click="closeBackupImport"
+                class="px-6 py-2.5 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors duration-200 font-medium"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 </template>
 
 <script>
@@ -1666,6 +1849,8 @@ export default {
     const showEditVerseForm = ref(false)
     const showEditCollectionForm = ref(false)
     const showSettings = ref(false)
+    const showSettingsMenu = ref(false)
+    const showBackupImport = ref(false)
     const showImportCSV = ref(false)
     const editingVerse = ref(null)
     const editingCollection = ref(null)
@@ -1696,6 +1881,7 @@ export default {
     const csvFileInput = ref(null)
     const csvTextarea = ref(null)
     const csvPastedText = ref('')
+    const backupFileInput = ref(null)
     const csvImportFromCollectionsScreen = ref(false)
     const csvImportTargetCollectionIds = ref([])
     const csvPreview = ref([])
@@ -1703,6 +1889,7 @@ export default {
     const importingCSV = ref(false)
     const expandedVerseIds = ref({})
     const copyToast = ref({ show: false, message: '' })
+    const lastBackupTimestamp = ref(localStorage.getItem('bible-memory-last-backup'))
 
     const newVerse = ref({
       reference: '',
@@ -2147,6 +2334,64 @@ export default {
         // Sort ascending (closest date first)
         return dateA - dateB
       })
+    })
+
+    // Check if WebDAV is configured
+    const hasWebDAVConfigured = computed(() => {
+      const settings = getWebDAVSettings()
+      return settings && settings.url && settings.username && settings.password
+    })
+
+    // Get last backup timestamp (reactive)
+    const getLastBackupTimestamp = () => {
+      return lastBackupTimestamp.value || null
+    }
+
+    // Get time since last backup as formatted string
+    const getTimeSinceLastBackup = () => {
+      const timestamp = getLastBackupTimestamp()
+      if (!timestamp) {
+        return 'Never backed up'
+      }
+      
+      const lastBackup = new Date(timestamp)
+      const now = new Date()
+      const diffMs = now - lastBackup
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+      const diffMinutes = Math.floor(diffMs / (1000 * 60))
+      
+      if (diffDays > 0) {
+        return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`
+      } else if (diffHours > 0) {
+        return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`
+      } else if (diffMinutes > 0) {
+        return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`
+      } else {
+        return 'Just now'
+      }
+    }
+
+    // Check if backup reminder should be shown
+    const shouldShowBackupReminder = computed(() => {
+      // Only show if WebDAV is not configured
+      if (hasWebDAVConfigured.value) {
+        return false
+      }
+      
+      const timestamp = getLastBackupTimestamp()
+      if (!timestamp) {
+        // Never backed up
+        return true
+      }
+      
+      // Check if last backup is more than 7 days ago
+      const lastBackup = new Date(timestamp)
+      const now = new Date()
+      const diffMs = now - lastBackup
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+      
+      return diffDays > 7
     })
 
     // Load collections from local storage
@@ -4708,6 +4953,136 @@ export default {
       }
     }
 
+    // Open settings menu
+    const toggleSettingsMenu = () => {
+      showSettingsMenu.value = !showSettingsMenu.value
+    }
+
+    // Close settings menu
+    const closeSettingsMenu = () => {
+      showSettingsMenu.value = false
+    }
+
+    // Open WebDAV settings from menu
+    const openWebDAVSettings = () => {
+      closeSettingsMenu()
+      showSettings.value = true
+    }
+
+    // Open backup/import modal from menu
+    const openBackupImport = () => {
+      closeSettingsMenu()
+      showBackupImport.value = true
+    }
+
+    // Close backup/import modal
+    const closeBackupImport = () => {
+      showBackupImport.value = false
+    }
+
+    // Backup all data
+    const backupAllData = () => {
+      try {
+        const settings = getWebDAVSettings()
+        const backupData = {
+          verses: verses.value,
+          collections: collections.value,
+          settings: settings,
+          backedUpAt: new Date().toISOString(),
+          version: '1.0'
+        }
+
+        const jsonStr = JSON.stringify(backupData, null, 2)
+        const blob = new Blob([jsonStr], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        
+        const dateStr = new Date().toISOString().split('T')[0]
+        const filename = `bible-memory-backup-${dateStr}.json`
+        
+        const link = document.createElement('a')
+        link.href = url
+        link.download = filename
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+
+        // Save backup timestamp
+        const timestamp = new Date().toISOString()
+        localStorage.setItem('bible-memory-last-backup', timestamp)
+        lastBackupTimestamp.value = timestamp
+      } catch (error) {
+        console.error('Error backing up data:', error)
+        alert('Failed to backup data. Please try again.')
+      }
+    }
+
+    // Import from backup file
+    const importFromBackup = async (file) => {
+      try {
+        const text = await file.text()
+        const backupData = JSON.parse(text)
+
+        // Validate backup structure
+        if (!backupData.verses || !Array.isArray(backupData.verses)) {
+          alert('Invalid backup file: missing verses array')
+          return
+        }
+        if (!backupData.collections || !Array.isArray(backupData.collections)) {
+          alert('Invalid backup file: missing collections array')
+          return
+        }
+
+        // Show confirmation
+        const confirmed = confirm(
+          'This will replace all your current data with the backup data. ' +
+          'This action cannot be undone. Are you sure you want to continue?'
+        )
+
+        if (!confirmed) {
+          return
+        }
+
+        // Replace data
+        verses.value = backupData.verses
+        collections.value = backupData.collections
+
+        // Restore settings if present
+        if (backupData.settings) {
+          saveWebDAVSettings(backupData.settings)
+          loadWebDAVSettings()
+        }
+
+        // Save to localStorage
+        saveVerses()
+        saveCollections()
+
+        // Update last backup timestamp if present
+        if (backupData.backedUpAt) {
+          localStorage.setItem('bible-memory-last-backup', backupData.backedUpAt)
+          lastBackupTimestamp.value = backupData.backedUpAt
+        }
+
+        // Close modal
+        closeBackupImport()
+
+        alert('Data imported successfully!')
+      } catch (error) {
+        console.error('Error importing backup:', error)
+        alert('Failed to import backup. Please check that the file is valid.')
+      }
+    }
+
+    // Handle file input for import
+    const handleBackupFileSelect = (event) => {
+      const file = event.target.files[0]
+      if (file) {
+        importFromBackup(file)
+        // Reset input
+        event.target.value = ''
+      }
+    }
+
     // Get display text for a word (shows partial text for hyphenated words)
     const getWordDisplayText = (word) => {
       // If word is fully revealed, show full text
@@ -4795,6 +5170,12 @@ export default {
       loadCollections()
       loadVerses()
       loadWebDAVSettings()
+      
+      // Load last backup timestamp
+      const stored = localStorage.getItem('bible-memory-last-backup')
+      if (stored) {
+        lastBackupTimestamp.value = stored
+      }
       
       // Initialize history state tracking for back button
       initializeHistory()
@@ -4894,17 +5275,31 @@ export default {
       handleDeleteVerseFromModal,
       deleteVerse,
       showSettings,
+      showSettingsMenu,
+      showBackupImport,
       isDev,
       webdavSettings,
       saveWebDAVSettingsForm,
       testWebDAVConnection,
       closeSettings,
+      toggleSettingsMenu,
+      closeSettingsMenu,
+      openWebDAVSettings,
+      openBackupImport,
+      closeBackupImport,
+      backupAllData,
+      importFromBackup,
+      handleBackupFileSelect,
+      getTimeSinceLastBackup,
+      hasWebDAVConfigured,
+      shouldShowBackupReminder,
+      backupFileInput,
       testingConnection,
       syncStatus,
       manualSync,
+      syncing,
       syncSuccess,
       syncError,
-      syncing,
       shareSuccess,
       showImportCSV,
       csvFileInput,
