@@ -491,7 +491,7 @@
           </svg>
         </button>
         <h1 class="text-xl font-semibold text-gray-900 flex-1 ml-2" :class="{ 'mr-20': !currentCollectionId || currentCollectionId }">
-          {{ currentCollectionId ? getCollectionName(currentCollectionId) : (currentView === 'review-list' ? 'Review' : (currentView === 'search' ? 'Search' : 'Collections')) }}
+          {{ currentCollectionId ? getCollectionName(currentCollectionId) : (currentView === 'review-list' ? 'Review' : (currentView === 'search' ? 'Search' : 'Verses')) }}
         </h1>
         <div class="flex items-center gap-1 ml-1 relative">
           <!-- Sync Button -->
@@ -652,7 +652,7 @@
       </div>
 
       <!-- Collections View -->
-      <div v-if="currentView === 'collections' && !currentCollectionId" >
+      <div v-if="currentView === 'collections' && !currentCollectionId && collections.length > 0" >
         
         <div class="space-y-3 overflow-y-auto py-4" style="max-height: calc(100vh - 8rem);">
           <!-- Master List Collection -->
@@ -661,7 +661,12 @@
             class="bg-blue-50 rounded-2xl shadow-sm p-4 cursor-pointer active:scale-98 transition-all duration-200 border border-blue-200"
           >
             <div class="flex items-start justify-between">
-              <h3 class="text-lg font-semibold text-blue-900 flex-1">Master List</h3>
+              <div class="flex items-center gap-2 flex-1 min-w-0">
+                <svg class="w-5 h-5 shrink-0 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                <h3 class="text-lg font-semibold text-blue-900">{{ getCollectionName('master-list') }}</h3>
+              </div>
               <div class="flex items-center gap-2">
                 <span
                   v-if="dueVersesCount > 0"
@@ -688,10 +693,15 @@
           <div
             v-if="hasNoCollectionVerses"
             @click="viewCollection('no-collection')"
-            class="bg-white rounded-2xl shadow-sm p-4 cursor-pointer active:scale-98 transition-all duration-200 border border-gray-100"
+            class="bg-slate-100 rounded-2xl shadow-sm p-4 cursor-pointer active:scale-98 transition-all duration-200 border border-slate-300"
           >
             <div class="flex items-start justify-between">
-              <h3 class="text-lg font-semibold text-gray-800 flex-1">No Collection</h3>
+              <div class="flex items-center gap-2 flex-1 min-w-0">
+                <svg class="w-5 h-5 shrink-0 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                </svg>
+                <h3 class="text-lg font-semibold text-slate-800">{{ getCollectionName('no-collection') }}</h3>
+              </div>
               <div class="flex items-center gap-2">
                 <span
                   v-if="getCollectionDueCount('no-collection') > 0"
@@ -708,7 +718,7 @@
               </div>
             </div>
             <div class="flex items-center justify-between">
-              <div class="text-xs text-gray-500">
+              <div class="text-xs text-slate-500">
                 {{ getCollectionVerseCount('no-collection') }} verse{{ getCollectionVerseCount('no-collection') !== 1 ? 's' : '' }}
               </div>
             </div>
@@ -718,10 +728,15 @@
           <div
             v-if="hasToLearnVerses"
             @click="viewCollection('to-learn')"
-            class="bg-white rounded-2xl shadow-sm p-4 cursor-pointer active:scale-98 transition-all duration-200 border border-gray-100"
+            class="bg-yellow-50 rounded-2xl shadow-sm p-4 cursor-pointer active:scale-98 transition-all duration-200 border border-yellow-200"
           >
             <div class="flex items-start justify-between">
-              <h3 class="text-lg font-semibold text-gray-800 flex-1">To Learn</h3>
+              <div class="flex items-center gap-2 flex-1 min-w-0">
+                <svg class="w-5 h-5 shrink-0 text-yellow-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
+                </svg>
+                <h3 class="text-lg font-semibold text-yellow-900">{{ getCollectionName('to-learn') }}</h3>
+              </div>
               <div class="flex items-center gap-2">
                 <span
                   v-if="getCollectionDueCount('to-learn') > 0"
@@ -738,7 +753,7 @@
               </div>
             </div>
             <div class="flex items-center justify-between">
-              <div class="text-xs text-gray-500">
+              <div class="text-xs text-yellow-800">
                 {{ getCollectionVerseCount('to-learn') }} verse{{ getCollectionVerseCount('to-learn') !== 1 ? 's' : '' }}
               </div>
             </div>
@@ -885,7 +900,7 @@
       </div>
 
       <!-- Collection View -->
-      <div v-if="currentCollectionId">
+      <div v-if="currentCollectionId || (currentView === 'collections' && !currentCollectionId && collections.length === 0)">
         <!-- Verse List -->
         <div class="space-y-3 py-4 overflow-y-auto max-h-[calc(100vh-4rem)]">
         <div
@@ -1017,7 +1032,7 @@
           <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
           </svg>
-          <span class="text-xs font-medium">Collections</span>
+          <span class="text-xs font-medium">Verses</span>
         </button>
         
         <!-- Search Tab -->
@@ -3468,19 +3483,23 @@ export default {
         }
         return verses.value.filter(v => v.collectionIds && v.collectionIds.includes(currentCollectionId.value))
       }
+      // No collection selected: show all verses when on Verses tab with no user collections
+      if (currentView.value === 'collections' && collections.value.length === 0) {
+        return verses.value
+      }
       return []
     }
 
     // Get collection name by ID
     const getCollectionName = (collectionId) => {
       if (collectionId === 'master-list') {
-        return 'Master List'
+        return 'All Verses'
       }
       if (collectionId === 'no-collection') {
-        return 'No Collection'
+        return 'Uncategorized'
       }
       if (collectionId === 'to-learn') {
-        return 'To Learn'
+        return 'Not Yet Mastered'
       }
       const collection = collections.value.find(c => c.id === collectionId)
       return collection ? collection.name : 'Unknown'
