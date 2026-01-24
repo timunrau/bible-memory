@@ -16,7 +16,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 class="text-xl font-semibold text-gray-900 flex-1 text-center mr-20">
+        <h1 class="text-xl font-semibold text-gray-900 flex-1">
           {{ memorizingVerse.reference }}
         </h1>
         <div class="flex items-center gap-1 ml-1">
@@ -243,7 +243,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 class="text-xl font-semibold text-gray-900 flex-1 text-center mr-20">
+        <h1 class="text-xl font-semibold text-gray-900 flex-1">
           {{ reviewingVerse.reference }}
         </h1>
         <div class="flex items-center gap-1 ml-1">
@@ -404,7 +404,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 class="text-xl font-semibold text-gray-900 flex-1 text-center" :class="{ 'mr-20': !currentCollectionId || currentCollectionId }">
+        <h1 class="text-xl font-semibold text-gray-900 flex-1 ml-2" :class="{ 'mr-20': !currentCollectionId || currentCollectionId }">
           {{ currentCollectionId ? getCollectionName(currentCollectionId) : (currentView === 'review-list' ? 'Review' : (currentView === 'search' ? 'Search' : 'Collections')) }}
         </h1>
         <div class="flex items-center gap-1 ml-1">
@@ -684,7 +684,7 @@
 
       <!-- Search View -->
       <div v-if="currentView === 'search' && !currentCollectionId" class="">
-        <div class="px-4 py-4">
+        <div class="py-4">
           <!-- Search Input -->
           <div class="relative mb-4">
             <input
