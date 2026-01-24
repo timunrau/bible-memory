@@ -35,9 +35,10 @@ You can:
 
 
 
-## How to import form biblememory.com
+## How to import from biblememory.com
+
 1. Use brave browser and open the collection you want to import via the web page.
-2. Open leo AI and use this prompt to conver the collection to CSV.
+2. Open Leo AI and use this prompt to convert the collection to CSV.
 ```
 For the list of verses on this page, export to CSV. Map it to columns as follows
 
