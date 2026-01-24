@@ -1620,7 +1620,7 @@ Romans 8:28,"And we know that in all things...",ESV,30,60</pre>
                 :disabled="testingConnection"
                 class="px-6 py-2.5 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {{ testingConnection ? 'Testing...' : 'Test Connection' }}
+                {{ testingConnection ? 'Testing...' : 'Test' }}
               </button>
               <div class="flex gap-3">
                 <button
@@ -1634,7 +1634,7 @@ Romans 8:28,"And we know that in all things...",ESV,30,60</pre>
                   type="submit"
                   class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors duration-200"
                 >
-                  Save Settings
+                  Save
                 </button>
               </div>
             </div>
