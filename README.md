@@ -4,17 +4,6 @@ A Progressive Web App for memorizing Bible verses using spaced repetition and pr
 
 Hosted at https://bible-memory.unrau.xyz
 
-## Privacy & Data Storage
-
-**Your data stays on your device.** All verses, progress, and review history are stored locally in your browser's storage. No cloud services or third-party servers are involved.
-
-You can:
-- **Backup manually** to a JSON file that you control
-- **Sync with your own WebDAV server** (like Nextcloud) for multi-device access
-- **Import from CSV** to migrate from other memorization apps
-
-Your memorization data is private and under your control.
-
 ## How It Works
 
 **Spaced Repetition System**
@@ -35,22 +24,14 @@ Once a verse is mastered, it enters the spaced repetition review cycle.
 
 Instead of typing complete words, you type just the first letter of each word to reveal it. This approach engages active recall while keeping the memorization process fast and efficient. The system supports hyphenated words (requiring first letter of each part) and includes fuzzy typing for adjacent QWERTY keys.
 
-## Features
+## Privacy & Data Storage
 
-- Intelligent spaced repetition with adaptive scheduling (1-90 day intervals)
-- Three-stage progressive memorization system
-- First-letter typing with fuzzy key support and real-time accuracy tracking
-- Review grading system (0-5) based on performance
-- Custom collections to organize verses by topic or study plan
-- Fuzzy search by reference or content
-- Full backup/restore and CSV import with preview
-- WebDAV sync for cloud backup and multi-device use
-- Complete review history for each verse
-- PWA support for offline use and installation on any device
+**Your data stays on your device.** All verses, progress, and review history are stored locally in your browser's storage. No cloud services or third-party servers are involved.
 
-
-
-
+You can:
+- **Backup manually** to a JSON file that you control
+- **Sync with your own WebDAV server** (like Nextcloud) for multi-device access
+- **Import from CSV** to migrate from other memorization apps
 
 
 
