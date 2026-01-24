@@ -405,7 +405,7 @@
           </svg>
         </button>
         <h1 class="text-xl font-semibold text-gray-900 flex-1 text-center" :class="{ 'mr-20': !currentCollectionId || currentCollectionId }">
-          {{ currentCollectionId ? getCollectionName(currentCollectionId) : (currentView === 'review-list' ? 'Review' : 'Collections') }}
+          {{ currentCollectionId ? getCollectionName(currentCollectionId) : (currentView === 'review-list' ? 'Review' : (currentView === 'search' ? 'Search' : 'Collections')) }}
         </h1>
         <div class="flex items-center gap-1 ml-1">
           <!-- Sync Button -->
@@ -709,15 +709,26 @@
               <div class="flex flex-col gap-2">
                 <div class="flex items-start justify-between gap-2">
                   <h3 class="text-lg font-semibold text-gray-800 flex-1" v-html="highlightText(result.item.reference, result.matches, 'reference')"></h3>
-                  <button
-                    @click.stop="copyVerse(result.item)"
-                    class="text-gray-500 hover:text-gray-700 p-1.5 rounded-full hover:bg-gray-100 transition-colors shrink-0"
-                    title="Share verse"
-                  >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                    </svg>
-                  </button>
+                  <div class="flex items-center gap-0.5 shrink-0">
+                    <button
+                      @click.stop="startEditVerse(result.item)"
+                      class="text-gray-500 hover:text-gray-700 p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+                      title="Edit verse"
+                    >
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                    <button
+                      @click.stop="copyVerse(result.item)"
+                      class="text-gray-500 hover:text-gray-700 p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+                      title="Share verse"
+                    >
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
                 <p class="text-gray-600 text-sm leading-relaxed" v-html="highlightText(result.item.content, result.matches, 'content')"></p>
               </div>
@@ -946,9 +957,9 @@
           <span class="text-sm font-medium">New Collection</span>
         </button>
         
-        <!-- Import CSV Option (only inside collections/master list) -->
+        <!-- Import CSV Option (collections screen or inside collection) -->
         <button
-          v-if="currentCollectionId"
+          v-if="currentCollectionId || (!currentCollectionId && currentView === 'collections')"
           key="import"
           @click="openImportCSV"
           class="bg-white text-gray-900 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-3 px-4 py-3 min-w-[160px] active:bg-gray-50"
@@ -1422,6 +1433,27 @@ Romans 8:28,"And we know that in all things...",ESV,30,60</pre>
               </div>
               <p class="text-xs text-gray-500 mt-2">Total rows: {{ csvPreview.length }}</p>
             </div>
+
+            <!-- Collections selector (only when opening from collections screen) -->
+            <div v-if="csvImportFromCollectionsScreen && collections.length > 0" class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Add to collections</label>
+              <div class="space-y-2 max-h-32 overflow-y-auto border border-gray-200 rounded-xl p-3">
+                <label
+                  v-for="collection in collections"
+                  :key="collection.id"
+                  class="flex items-center space-x-2 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    :value="collection.id"
+                    v-model="csvImportTargetCollectionIds"
+                    class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span class="text-gray-700">{{ collection.name }}</span>
+                </label>
+              </div>
+              <p class="text-xs text-gray-500 mt-1">Select which collections to add imported verses to. Leave empty for master list only.</p>
+            </div>
           </div>
 
           <div class="flex justify-end space-x-3 pt-4">
@@ -1521,7 +1553,7 @@ Romans 8:28,"And we know that in all things...",ESV,30,60</pre>
               />
             </div>
 
-            <div class="border-t border-gray-200 pt-4 mt-4">
+            <div v-if="isDev" class="border-t border-gray-200 pt-4 mt-4">
               <div class="flex items-center space-x-2 mb-4">
                 <input
                   id="use-proxy"
@@ -1563,7 +1595,7 @@ Romans 8:28,"And we know that in all things...",ESV,30,60</pre>
               <p class="text-sm whitespace-pre-line">{{ syncStatus.message }}</p>
             </div>
 
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+            <div v-if="isDev" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
               <p class="text-sm text-blue-800">
                 <strong>Note:</strong> If you see a "CORS Error", enable the CORS proxy option above and run the proxy server. 
                 This is needed for Nextcloud and other servers that don't allow direct browser access.
@@ -1649,9 +1681,12 @@ export default {
     const syncError = ref(null)
     const shareSuccess = ref(false)
     const fabMenuOpen = ref(false)
+    const isDev = import.meta.env.DEV
     const csvFileInput = ref(null)
     const csvTextarea = ref(null)
     const csvPastedText = ref('')
+    const csvImportFromCollectionsScreen = ref(false)
+    const csvImportTargetCollectionIds = ref([])
     const csvPreview = ref([])
     const csvImportStatus = ref(null)
     const importingCSV = ref(false)
@@ -2645,6 +2680,8 @@ export default {
     // Open CSV import modal
     const openImportCSV = () => {
       fabMenuOpen.value = false
+      csvImportFromCollectionsScreen.value = !currentCollectionId.value && currentView.value === 'collections'
+      csvImportTargetCollectionIds.value = csvImportFromCollectionsScreen.value ? [] : []
       showImportCSV.value = true
       csvPreview.value = []
       csvImportStatus.value = null
@@ -2657,6 +2694,7 @@ export default {
       csvPreview.value = []
       csvImportStatus.value = null
       csvPastedText.value = ''
+      csvImportTargetCollectionIds.value = []
       if (csvFileInput.value) {
         csvFileInput.value.value = ''
       }
@@ -2893,7 +2931,9 @@ export default {
         
         // Determine collection IDs to add verses to
         let collectionIds = []
-        if (currentCollectionId.value && currentCollectionId.value !== 'master-list') {
+        if (csvImportFromCollectionsScreen.value) {
+          collectionIds = [...(csvImportTargetCollectionIds.value || [])]
+        } else if (currentCollectionId.value && currentCollectionId.value !== 'master-list') {
           collectionIds = [currentCollectionId.value]
         }
         
@@ -2967,13 +3007,16 @@ export default {
               existingVerse.easeFactor = 2.5
             }
             
-            // If importing into a collection, add to that collection if not already there
-            if (currentCollectionId.value && currentCollectionId.value !== 'master-list') {
+            // If importing into collection(s), add to those collections if not already there
+            const targetCollectionIds = csvImportFromCollectionsScreen.value
+              ? (csvImportTargetCollectionIds.value || [])
+              : (currentCollectionId.value && currentCollectionId.value !== 'master-list' ? [currentCollectionId.value] : [])
+            for (const cid of targetCollectionIds) {
               if (!existingVerse.collectionIds) {
                 existingVerse.collectionIds = []
               }
-              if (!existingVerse.collectionIds.includes(currentCollectionId.value)) {
-                existingVerse.collectionIds.push(currentCollectionId.value)
+              if (!existingVerse.collectionIds.includes(cid)) {
+                existingVerse.collectionIds.push(cid)
                 hasAnyUpdate = true
               }
             }
@@ -4835,6 +4878,7 @@ export default {
       handleDeleteVerseFromModal,
       deleteVerse,
       showSettings,
+      isDev,
       webdavSettings,
       saveWebDAVSettingsForm,
       testWebDAVConnection,
@@ -4850,6 +4894,8 @@ export default {
       csvFileInput,
       csvPreview,
       csvImportStatus,
+      csvImportFromCollectionsScreen,
+      csvImportTargetCollectionIds,
       importingCSV,
       handleCSVFileSelect,
       handleCSVPaste,
