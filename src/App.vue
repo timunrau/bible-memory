@@ -1115,6 +1115,33 @@
             </div>
 
             <div>
+              <button
+                type="button"
+                @click="importVerseContent"
+                :disabled="!newVerse.reference || !newVerse.bibleVersion || importingVerse"
+                class="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-colors duration-200 flex items-center space-x-2"
+              >
+                <svg v-if="importingVerse" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>{{ importingVerse ? 'Importing...' : 'Import Content' }}</span>
+              </button>
+
+              <div v-if="importError" class="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <p class="text-sm text-amber-800">{{ importError }}</p>
+                <a
+                  v-if="importErrorShowLink"
+                  href="https://fetch.bible/content/need/"
+                  target="_blank"
+                  class="text-sm text-purple-600 hover:text-purple-800 underline mt-1 inline-block"
+                >
+                  Learn more about available translations
+                </a>
+              </div>
+            </div>
+
+            <div>
               <label for="content" class="block text-sm font-medium text-gray-700 mb-2">
                 Verse Content
               </label>
@@ -1760,6 +1787,7 @@ Romans 8:28,"And we know that in all things...",ESV,30,60</pre>
 <script>
 import { ref, onMounted, onBeforeUnmount, computed, nextTick } from 'vue'
 import Fuse from 'fuse.js'
+import { BibleClient } from '@gracious.tech/fetch-client'
 import { 
   getWebDAVSettings, 
   saveWebDAVSettings, 
@@ -1821,6 +1849,13 @@ export default {
     const expandedVerseIds = ref({})
     const copyToast = ref({ show: false, message: '' })
     const lastBackupTimestamp = ref(localStorage.getItem('bible-memory-last-backup'))
+
+    // Bible verse import state
+    const importingVerse = ref(false)
+    const importError = ref(null)
+    const importErrorShowLink = ref(false)
+    const bibleClient = ref(null)
+    const bibleCollection = ref(null)
 
     const newVerse = ref({
       reference: '',
@@ -2818,6 +2853,216 @@ export default {
         collectionIds: []
       }
       fabMenuOpen.value = false
+      importError.value = null
+      importErrorShowLink.value = false
+      importingVerse.value = false
+    }
+
+    // Initialize Bible client lazily
+    const initBibleClient = async () => {
+      if (!bibleClient.value) {
+        bibleClient.value = new BibleClient()
+      }
+      if (!bibleCollection.value) {
+        bibleCollection.value = await bibleClient.value.fetch_collection()
+      }
+      return { client: bibleClient.value, collection: bibleCollection.value }
+    }
+
+    // Parse verse reference into components
+    const parseVerseReference = (reference) => {
+      // Handles: "John 3:16", "John 3:16-17", "1 John 1:9", "Psalm 23:1-6"
+      const match = reference.match(/^(\d?\s*[A-Za-z]+)\s+(\d+):(\d+)(?:-(\d+))?$/)
+      if (!match) return null
+
+      const bookName = match[1].trim()
+      const chapter = parseInt(match[2], 10)
+      const verseStart = parseInt(match[3], 10)
+      const verseEnd = match[4] ? parseInt(match[4], 10) : verseStart
+
+      return { bookName, chapter, verseStart, verseEnd }
+    }
+
+    // Map book name to API book ID
+    const getBookId = (bookName) => {
+      const normalizedName = bookName.toLowerCase().replace(/\s+/g, '')
+
+      // Common variations mapping
+      const variations = {
+        'psalm': 'psa', 'psalms': 'psa', 'ps': 'psa',
+        'genesis': 'gen', 'gen': 'gen',
+        'exodus': 'exo', 'exod': 'exo', 'ex': 'exo',
+        'leviticus': 'lev', 'lev': 'lev',
+        'numbers': 'num', 'num': 'num',
+        'deuteronomy': 'deu', 'deut': 'deu',
+        'joshua': 'jos', 'josh': 'jos',
+        'judges': 'jdg', 'judg': 'jdg',
+        'ruth': 'rut',
+        '1samuel': '1sa', '1sam': '1sa',
+        '2samuel': '2sa', '2sam': '2sa',
+        '1kings': '1ki', '1kgs': '1ki',
+        '2kings': '2ki', '2kgs': '2ki',
+        '1chronicles': '1ch', '1chr': '1ch',
+        '2chronicles': '2ch', '2chr': '2ch',
+        'ezra': 'ezr',
+        'nehemiah': 'neh', 'neh': 'neh',
+        'esther': 'est', 'esth': 'est',
+        'job': 'job',
+        'proverbs': 'pro', 'prov': 'pro',
+        'ecclesiastes': 'ecc', 'eccl': 'ecc',
+        'songofsolomon': 'sng', 'songofsongs': 'sng', 'song': 'sng', 'sos': 'sng',
+        'isaiah': 'isa', 'isa': 'isa',
+        'jeremiah': 'jer', 'jer': 'jer',
+        'lamentations': 'lam', 'lam': 'lam',
+        'ezekiel': 'ezk', 'ezek': 'ezk',
+        'daniel': 'dan', 'dan': 'dan',
+        'hosea': 'hos', 'hos': 'hos',
+        'joel': 'jol', 'joe': 'jol',
+        'amos': 'amo', 'amo': 'amo',
+        'obadiah': 'oba', 'obad': 'oba',
+        'jonah': 'jon', 'jon': 'jon',
+        'micah': 'mic', 'mic': 'mic',
+        'nahum': 'nam', 'nah': 'nam',
+        'habakkuk': 'hab', 'hab': 'hab',
+        'zephaniah': 'zep', 'zeph': 'zep',
+        'haggai': 'hag', 'hag': 'hag',
+        'zechariah': 'zec', 'zech': 'zec',
+        'malachi': 'mal', 'mal': 'mal',
+        'matthew': 'mat', 'matt': 'mat', 'mt': 'mat',
+        'mark': 'mrk', 'mk': 'mrk', 'mar': 'mrk',
+        'luke': 'luk', 'lk': 'luk',
+        'john': 'jhn', 'jn': 'jhn',
+        'acts': 'act',
+        'romans': 'rom', 'rom': 'rom',
+        '1corinthians': '1co', '1cor': '1co',
+        '2corinthians': '2co', '2cor': '2co',
+        'galatians': 'gal', 'gal': 'gal',
+        'ephesians': 'eph', 'eph': 'eph',
+        'philippians': 'php', 'phil': 'php',
+        'colossians': 'col', 'col': 'col',
+        '1thessalonians': '1th', '1thess': '1th',
+        '2thessalonians': '2th', '2thess': '2th',
+        '1timothy': '1ti', '1tim': '1ti',
+        '2timothy': '2ti', '2tim': '2ti',
+        'titus': 'tit', 'tit': 'tit',
+        'philemon': 'phm', 'phlm': 'phm',
+        'hebrews': 'heb', 'heb': 'heb',
+        'james': 'jas', 'jam': 'jas',
+        '1peter': '1pe', '1pet': '1pe',
+        '2peter': '2pe', '2pet': '2pe',
+        '1john': '1jn', '1jn': '1jn',
+        '2john': '2jn', '2jn': '2jn',
+        '3john': '3jn', '3jn': '3jn',
+        'jude': 'jud',
+        'revelation': 'rev', 'rev': 'rev'
+      }
+
+      // Try direct variation match
+      if (variations[normalizedName]) {
+        return variations[normalizedName]
+      }
+
+      // Try first 3 characters as fallback
+      return normalizedName.substring(0, 3)
+    }
+
+    // Main import function
+    const importVerseContent = async () => {
+      importError.value = null
+      importErrorShowLink.value = false
+
+      const reference = newVerse.value.reference.trim()
+      const version = newVerse.value.bibleVersion.trim().toLowerCase()
+
+      if (!reference || !version) {
+        importError.value = 'Please enter both a verse reference and Bible version first.'
+        return
+      }
+
+      const parsed = parseVerseReference(reference)
+      if (!parsed) {
+        importError.value = "Could not parse verse reference. Please use format like 'John 3:16' or 'John 3:16-17'."
+        return
+      }
+
+      importingVerse.value = true
+
+      try {
+        const { collection } = await initBibleClient()
+
+        // Try to find the translation with different ID formats
+        // Users might enter "BSB", but the API uses "eng_bsb"
+        const versionVariants = [
+          version,
+          `eng_${version}`,
+          version.replace(/^eng_/, ''),
+        ]
+
+        let translationId = null
+        for (const variant of versionVariants) {
+          if (collection.has_translation(variant)) {
+            translationId = variant
+            break
+          }
+        }
+
+        if (!translationId) {
+          importError.value = `The ${version.toUpperCase()} version is not available. Most popular translations (ESV, NIV, NASB, etc.) are copyrighted and not freely distributable.`
+          importErrorShowLink.value = true
+          importingVerse.value = false
+          return
+        }
+
+        // Get the book ID
+        const bookId = getBookId(parsed.bookName)
+
+        // Check if book exists in this translation
+        if (!collection.has_book(translationId, bookId)) {
+          importError.value = `Could not find book '${parsed.bookName}' in this translation.`
+          importingVerse.value = false
+          return
+        }
+
+        // Fetch the book in 'txt' format which supports excluding notes
+        const book = await collection.fetch_book(translationId, bookId, 'txt')
+
+        // Extract verses using get_passage for ranges or get_verse for single
+        // Use notes: false to exclude footnotes, verse_nums: false to exclude verse numbers
+        const options = { attribute: false, notes: false, verse_nums: false, headings: false }
+        let verseText
+        if (parsed.verseStart === parsed.verseEnd) {
+          verseText = book.get_verse(parsed.chapter, parsed.verseStart, options)
+        } else {
+          verseText = book.get_passage(
+            parsed.chapter, parsed.verseStart,
+            parsed.chapter, parsed.verseEnd,
+            options
+          )
+        }
+
+        if (!verseText) {
+          importError.value = 'Verse(s) not found. Please check the chapter and verse numbers.'
+          importingVerse.value = false
+          return
+        }
+
+        // Clean up whitespace
+        verseText = verseText.replace(/\s+/g, ' ').trim()
+
+        if (!verseText) {
+          importError.value = 'Verse(s) not found. Please check the verse numbers.'
+          importingVerse.value = false
+          return
+        }
+
+        newVerse.value.content = verseText
+        importingVerse.value = false
+
+      } catch (err) {
+        console.error('Import error:', err)
+        importError.value = `Failed to import verse: ${err.message}`
+        importingVerse.value = false
+      }
     }
 
     // Add new collection
@@ -5247,7 +5492,11 @@ export default {
       handleCSVPaste,
       csvPastedText,
       importCSVVerses,
-      closeImportCSV
+      closeImportCSV,
+      importingVerse,
+      importError,
+      importErrorShowLink,
+      importVerseContent
     }
   }
 }
