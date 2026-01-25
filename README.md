@@ -85,7 +85,6 @@ This app can be hosted using Docker Compose, which includes both the application
 ### Prerequisites
 
 - Docker and Docker Compose installed on your server
-- A Nextcloud (or other WebDAV) server URL
 
 ### Initial Setup
 
@@ -95,13 +94,6 @@ This app can be hosted using Docker Compose, which includes both the application
    cd bible-memory
    ```
 
-2. **Configure the WebDAV proxy**:
-   Edit `docker-compose.yml` and update the `NEXTCLOUD_URL` environment variable in the `webdav-proxy` service:
-   ```yaml
-   environment:
-     - PROXY_PORT=3001
-     - NEXTCLOUD_URL="https://your-nextcloud.com/remote.php/dav/files/username"
-   ```
 
 3. **Build and start the services**:
    ```bash
