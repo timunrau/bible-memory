@@ -328,7 +328,7 @@
                 {{ word.text }}
               </span>
               <template v-else-if="isPartiallyTyped(word)">
-                <span class="text-gray-900 font-semibold">{{ getPartialWordText(word) }}</span><span class="text-gray-300">{{ '_'.repeat(getRemainingPartText(word).length) }}</span>
+                <span class="text-gray-900">{{ getPartialWordText(word) }}</span><span class="text-gray-300">{{ '_'.repeat(getRemainingPartText(word).length) }}</span>
               </template>
               <span v-else class="text-gray-300">
                 {{ '_'.repeat(word.text.length) }}
@@ -2017,15 +2017,22 @@ export default {
             const totalWords = reviewWords.value.length
             const grade = calculateGrade(totalWords, reviewMistakes.value)
             
-            // Calculate next review date and update ease factor
-            // Pass isNewReview=true to ensure we always calculate a new date for this review
-            const reviewData = calculateNextReviewDate(verse, grade, true)
+            // Check if verse was already reviewed today
+            const wasAlreadyReviewedToday = wasReviewedToday(verse)
             
-            verse.reviewCount = (verse.reviewCount || 0) + 1
+            // Only update algorithm-affecting fields if this is the first review of the day
+            if (!wasAlreadyReviewedToday) {
+              // Calculate next review date and update ease factor
+              const reviewData = calculateNextReviewDate(verse, grade, true)
+              
+              verse.reviewCount = (verse.reviewCount || 0) + 1
+              verse.nextReviewDate = reviewData.nextReviewDate
+              verse.easeFactor = reviewData.easeFactor
+              verse.interval = reviewData.interval
+            }
+            
+            // Always update tracking fields regardless of whether it was reviewed today
             verse.lastReviewed = new Date().toISOString()
-            verse.nextReviewDate = reviewData.nextReviewDate
-            verse.easeFactor = reviewData.easeFactor
-            verse.interval = reviewData.interval
             verse.lastGrade = grade
             verse.lastAccuracy = ((totalWords - reviewMistakes.value) / totalWords * 100).toFixed(1)
             verse.lastModified = new Date().toISOString()
@@ -4098,13 +4105,22 @@ export default {
         if (prevVerse) {
           const totalWords = reviewWords.value.length
           const grade = calculateGrade(totalWords, reviewMistakes.value)
-          const reviewData = calculateNextReviewDate(prevVerse, grade, true)
           
-          prevVerse.reviewCount = (prevVerse.reviewCount || 0) + 1
+          // Check if verse was already reviewed today
+          const wasAlreadyReviewedToday = wasReviewedToday(prevVerse)
+          
+          // Only update algorithm-affecting fields if this is the first review of the day
+          if (!wasAlreadyReviewedToday) {
+            const reviewData = calculateNextReviewDate(prevVerse, grade, true)
+            
+            prevVerse.reviewCount = (prevVerse.reviewCount || 0) + 1
+            prevVerse.nextReviewDate = reviewData.nextReviewDate
+            prevVerse.easeFactor = reviewData.easeFactor
+            prevVerse.interval = reviewData.interval
+          }
+          
+          // Always update tracking fields regardless of whether it was reviewed today
           prevVerse.lastReviewed = new Date().toISOString()
-          prevVerse.nextReviewDate = reviewData.nextReviewDate
-          prevVerse.easeFactor = reviewData.easeFactor
-          prevVerse.interval = reviewData.interval
           prevVerse.lastGrade = grade
           prevVerse.lastAccuracy = ((totalWords - reviewMistakes.value) / totalWords * 100).toFixed(1)
           prevVerse.lastModified = new Date().toISOString()
@@ -4393,9 +4409,8 @@ export default {
           const totalWords = reviewWords.value.length
           const grade = calculateGrade(totalWords, reviewMistakes.value)
           
-          // Calculate next review date and update ease factor
-          // Pass isNewReview=true to ensure we always calculate a new date for this review
-          const reviewData = calculateNextReviewDate(verse, grade, true)
+          // Check if verse was already reviewed today
+          const wasAlreadyReviewedToday = wasReviewedToday(verse)
           
           const newLastReviewed = new Date().toISOString()
           
@@ -4404,14 +4419,23 @@ export default {
             lastReviewed: verse.lastReviewed,
             nextReviewDate: verse.nextReviewDate,
             interval: verse.interval,
-            easeFactor: verse.easeFactor
+            easeFactor: verse.easeFactor,
+            wasAlreadyReviewedToday: wasAlreadyReviewedToday
           })
           
-          verse.reviewCount = (verse.reviewCount || 0) + 1
+          // Only update algorithm-affecting fields if this is the first review of the day
+          if (!wasAlreadyReviewedToday) {
+            // Calculate next review date and update ease factor
+            const reviewData = calculateNextReviewDate(verse, grade, true)
+            
+            verse.reviewCount = (verse.reviewCount || 0) + 1
+            verse.nextReviewDate = reviewData.nextReviewDate
+            verse.easeFactor = reviewData.easeFactor
+            verse.interval = reviewData.interval
+          }
+          
+          // Always update tracking fields regardless of whether it was reviewed today
           verse.lastReviewed = newLastReviewed
-          verse.nextReviewDate = reviewData.nextReviewDate
-          verse.easeFactor = reviewData.easeFactor
-          verse.interval = reviewData.interval
           verse.lastGrade = grade
           verse.lastAccuracy = ((totalWords - reviewMistakes.value) / totalWords * 100).toFixed(1)
           verse.lastModified = new Date().toISOString() // Track when verse was last modified
@@ -4534,9 +4558,8 @@ export default {
           const totalWords = reviewWords.value.length
           const grade = calculateGrade(totalWords, reviewMistakes.value)
           
-          // Calculate next review date and update ease factor
-          // Pass isNewReview=true to ensure we always calculate a new date for this review
-          const reviewData = calculateNextReviewDate(verse, grade, true)
+          // Check if verse was already reviewed today
+          const wasAlreadyReviewedToday = wasReviewedToday(verse)
           
           const newLastReviewed = new Date().toISOString()
           
@@ -4544,14 +4567,23 @@ export default {
             reviewCount: verse.reviewCount,
             lastReviewed: verse.lastReviewed,
             nextReviewDate: verse.nextReviewDate,
-            interval: verse.interval
+            interval: verse.interval,
+            wasAlreadyReviewedToday: wasAlreadyReviewedToday
           })
           
-          verse.reviewCount = (verse.reviewCount || 0) + 1
+          // Only update algorithm-affecting fields if this is the first review of the day
+          if (!wasAlreadyReviewedToday) {
+            // Calculate next review date and update ease factor
+            const reviewData = calculateNextReviewDate(verse, grade, true)
+            
+            verse.reviewCount = (verse.reviewCount || 0) + 1
+            verse.nextReviewDate = reviewData.nextReviewDate
+            verse.easeFactor = reviewData.easeFactor
+            verse.interval = reviewData.interval
+          }
+          
+          // Always update tracking fields regardless of whether it was reviewed today
           verse.lastReviewed = newLastReviewed
-          verse.nextReviewDate = reviewData.nextReviewDate
-          verse.easeFactor = reviewData.easeFactor
-          verse.interval = reviewData.interval
           verse.lastGrade = grade
           verse.lastAccuracy = ((totalWords - reviewMistakes.value) / totalWords * 100).toFixed(1)
           verse.lastModified = new Date().toISOString() // Track when verse was last modified
