@@ -2517,9 +2517,16 @@ export default {
     // For "peace-loving", returns ["p", "l"]
     // For "hello", returns ["h"]
     const getRequiredLetters = (word) => {
-      // Handle various hyphen/dash characters: regular hyphen, en-dash, em-dash
+      // Handle various hyphen/dash characters:
+      // - U+002D HYPHEN-MINUS (-)
+      // - U+2010 HYPHEN (‐)
+      // - U+2011 NON-BREAKING HYPHEN (‑)
+      // - U+2012 FIGURE DASH (‒)
+      // - U+2013 EN DASH (–)
+      // - U+2014 EM DASH (—)
+      // - U+2015 HORIZONTAL BAR (―)
       // Split by any type of dash/hyphen character
-      const parts = word.split(/[-–—]/)
+      const parts = word.split(/[-\u2010-\u2015]/)
       const requiredLetters = []
       
       for (const part of parts) {
@@ -2552,8 +2559,8 @@ export default {
       const parts = []
       let lastIndex = 0
       
-      // Match hyphens, en-dashes, and em-dashes
-      const separatorRegex = /[-–—]/g
+      // Match all types of hyphens and dashes (U+002D, U+2010-U+2015)
+      const separatorRegex = /[-\u2010-\u2015]/g
       let match
       
       while ((match = separatorRegex.exec(word)) !== null) {
