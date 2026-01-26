@@ -81,24 +81,24 @@
           >
             <span v-if="memorizationMode === 'learn'">
               <template v-if="word.revealed">
-                <span :class="word.incorrect ? 'text-red-600 font-semibold' : 'text-gray-900 font-semibold'">{{ word.text }}</span>
+                <span :class="word.incorrect ? 'text-red-600' : 'text-gray-900'">{{ word.text }}</span>
               </template>
               <template v-else-if="isPartiallyTyped(word)">
-                <span class="text-gray-900 font-semibold">{{ getPartialWordText(word) }}</span><span class="text-gray-300">{{ getRemainingPartText(word) }}</span>
+                <span class="text-gray-900">{{ getPartialWordText(word) }}</span><span class="text-gray-300">{{ getRemainingPartText(word) }}</span>
               </template>
               <template v-else>
                 <span class="text-gray-300">{{ word.text }}</span>
               </template>
             </span>
             <span v-else-if="memorizationMode === 'memorize'">
-              <span v-if="word.visible && !word.revealed" class="text-gray-300">
+              <span v-if="word.visible && !word.revealed && !isPartiallyTyped(word)" class="text-gray-300">
                 {{ word.text }}
               </span>
               <span v-else-if="word.revealed" :class="word.incorrect ? 'text-red-600' : 'text-gray-900'">
                 {{ word.text }}
               </span>
               <template v-else-if="isPartiallyTyped(word)">
-                <span class="text-gray-900 font-semibold">{{ getPartialWordText(word) }}</span><span class="text-gray-300">{{ '_'.repeat(getRemainingPartText(word).length) }}</span>
+                <span class="text-gray-900">{{ getPartialWordText(word) }}</span><span class="text-gray-300">{{ '_'.repeat(getRemainingPartText(word).length) }}</span>
               </template>
               <span v-else class="text-gray-300">
                 {{ '_'.repeat(word.text.length) }}
