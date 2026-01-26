@@ -79,33 +79,40 @@
             :id="`memorize-word-${index}`"
             class="inline-block mr-2"
           >
-            <span
-              v-if="memorizationMode === 'learn'"
-              :class="word.revealed ? (word.incorrect ? 'text-red-600 font-semibold' : 'text-gray-900 font-semibold') : 'text-gray-300'"
-            >
-              {{ word.revealed ? word.text : (getWordDisplayText(word) || word.text) }}
+            <span v-if="memorizationMode === 'learn'">
+              <template v-if="word.revealed">
+                <span :class="word.incorrect ? 'text-red-600 font-semibold' : 'text-gray-900 font-semibold'">{{ word.text }}</span>
+              </template>
+              <template v-else-if="isPartiallyTyped(word)">
+                <span class="text-gray-900 font-semibold">{{ getPartialWordText(word) }}</span><span class="text-gray-300">{{ getRemainingPartText(word) }}</span>
+              </template>
+              <template v-else>
+                <span class="text-gray-300">{{ word.text }}</span>
+              </template>
             </span>
-            <span
-              v-else-if="memorizationMode === 'memorize'"
-            >
+            <span v-else-if="memorizationMode === 'memorize'">
               <span v-if="word.visible && !word.revealed" class="text-gray-300">
                 {{ word.text }}
               </span>
               <span v-else-if="word.revealed" :class="word.incorrect ? 'text-red-600' : 'text-gray-900'">
                 {{ word.text }}
               </span>
+              <template v-else-if="isPartiallyTyped(word)">
+                <span class="text-gray-900 font-semibold">{{ getPartialWordText(word) }}</span><span class="text-gray-300">{{ '_'.repeat(getRemainingPartText(word).length) }}</span>
+              </template>
               <span v-else class="text-gray-300">
-                {{ getWordDisplayText(word) || '_'.repeat(word.text.length) }}
+                {{ '_'.repeat(word.text.length) }}
               </span>
             </span>
-            <span
-              v-else-if="memorizationMode === 'master'"
-            >
+            <span v-else-if="memorizationMode === 'master'">
               <span v-if="word.revealed" :class="word.incorrect ? 'text-red-600' : 'text-gray-900'">
                 {{ word.text }}
               </span>
+              <template v-else-if="isPartiallyTyped(word)">
+                <span class="text-gray-900 font-semibold">{{ getPartialWordText(word) }}</span><span class="text-gray-300">{{ '_'.repeat(getRemainingPartText(word).length) }}</span>
+              </template>
               <span v-else class="text-gray-300">
-                {{ getWordDisplayText(word) || '_'.repeat(word.text.length) }}
+                {{ '_'.repeat(word.text.length) }}
               </span>
             </span>
           </span>
@@ -320,8 +327,11 @@
               <span v-if="word.revealed" :class="word.incorrect ? 'text-red-600' : 'text-gray-900'">
                 {{ word.text }}
               </span>
+              <template v-else-if="isPartiallyTyped(word)">
+                <span class="text-gray-900 font-semibold">{{ getPartialWordText(word) }}</span><span class="text-gray-300">{{ '_'.repeat(getRemainingPartText(word).length) }}</span>
+              </template>
               <span v-else class="text-gray-300">
-                {{ getWordDisplayText(word) || '_'.repeat(word.text.length) }}
+                {{ '_'.repeat(word.text.length) }}
               </span>
             </span>
           </div>
@@ -2618,6 +2628,57 @@ export default {
       }
       
       return partialText
+    }
+
+    // Get remaining (untyped) part of a word for hyphenated words
+    // For "peace-loving" with typedLettersIndex=1, returns "loving"
+    // For "peace-loving" with typedLettersIndex=0, returns "peace-loving"
+    const getRemainingPartText = (word) => {
+      if (!word.requiredLetters || word.requiredLetters.length <= 1) {
+        // Not a hyphenated word - return full text
+        return word.text
+      }
+      
+      const typedLettersIndex = word.typedLettersIndex || 0
+      
+      // If all letters typed, return empty
+      if (typedLettersIndex >= word.requiredLetters.length) {
+        return ''
+      }
+      
+      // If no letters typed yet, return full text
+      if (typedLettersIndex === 0) {
+        return word.text
+      }
+      
+      // Use stored parts and separators, or compute them if not available
+      let parts = word.parts
+      let separators = word.separators
+      if (!parts || !separators) {
+        const split = splitWordParts(word.text)
+        parts = split.parts
+        separators = split.separators
+      }
+      
+      // Build remaining text from current part onwards
+      let remainingText = ''
+      for (let i = typedLettersIndex; i < parts.length; i++) {
+        if (i > typedLettersIndex && separators[i - 1]) {
+          remainingText += separators[i - 1]
+        }
+        remainingText += parts[i]
+      }
+      
+      return remainingText
+    }
+
+    // Check if a word is partially typed (for hyphenated words like "residing—all")
+    const isPartiallyTyped = (word) => {
+      if (!word.requiredLetters || word.requiredLetters.length <= 1) {
+        return false
+      }
+      const typedLettersIndex = word.typedLettersIndex || 0
+      return typedLettersIndex > 0 && typedLettersIndex < word.requiredLetters.length
     }
 
     // Check if typed letter is correct or adjacent (fuzzy typing)
@@ -5418,6 +5479,9 @@ export default {
       handleKeyPress,
       checkLetter,
       getWordDisplayText,
+      getPartialWordText,
+      getRemainingPartText,
+      isPartiallyTyped,
       accuracy,
       meetsAccuracyRequirement,
       collections,
