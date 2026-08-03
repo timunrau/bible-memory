@@ -1595,6 +1595,7 @@
                   <a :href="getBibleGatewayUrl(newVerse)" target="_blank" rel="noopener noreferrer" class="inline-flex items-center px-3 py-1 rounded-full border border-status-amber-border text-sm text-status-purple-text hover:bg-status-amber-border transition-colors">Bible Gateway</a>
                   <a v-if="getYouVersionUrl(newVerse)" :href="getYouVersionUrl(newVerse)" target="_blank" rel="noopener noreferrer" class="inline-flex items-center px-3 py-1 rounded-full border border-status-amber-border text-sm text-status-purple-text hover:bg-status-amber-border transition-colors">YouVersion</a>
                 </div>
+                <p class="text-sm text-status-amber-text">Or try the BSB translation to fill in the verse content automatically.</p>
                 <a
                   href="https://fetch.bible/content/need/"
                   target="_blank"
