@@ -1,3 +1,10 @@
+# [1.41.0](https://github.com/timunrau/rum1n8/compare/v1.40.1...v1.41.0) (2026-08-03)
+
+
+### Features
+
+* mention BSB when verse import is unavailable ([2a7eeb5](https://github.com/timunrau/rum1n8/commit/2a7eeb5bbc5f1bc2b32523e32eb3d3505719ba00))
+
 ## [1.40.1](https://github.com/timunrau/rum1n8/compare/v1.40.0...v1.40.1) (2026-08-03)
 
 # [1.40.0](https://github.com/timunrau/rum1n8/compare/v1.39.1...v1.40.0) (2026-07-23)
