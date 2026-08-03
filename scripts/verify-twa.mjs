@@ -100,7 +100,7 @@ if (twa) {
   check(new RegExp(`applicationId "${escapedPackage}"`).test(gradle), 'Gradle defaultConfig package ID differs from twa-manifest.json.')
   check(/launchUrl: '\/app\/'/.test(gradle), 'Generated Gradle launchUrl must be exactly /app/.')
   check(compileSdk >= targetSdk, 'Android compile SDK must not be lower than its target SDK.')
-  check(targetSdk >= 35, 'Android target SDK is below the current Play requirement.')
+  check(targetSdk >= 36, 'Android target SDK is below the current Play requirement.')
   check(gradle.includes(`versionCode ${twa.appVersionCode}`), 'Generated Android versionCode differs from twa-manifest.json.')
   check(gradle.includes(`versionName "${twa.appVersionName}"`), 'Generated Android versionName differs from twa-manifest.json.')
   check(new RegExp(`package ${escapedPackage};`).test(launcherActivity), 'LauncherActivity package differs from twa-manifest.json.')

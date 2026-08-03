@@ -2,11 +2,13 @@ import { readdir, readFile, writeFile } from 'node:fs/promises'
 import { basename, extname, join, resolve } from 'node:path'
 
 const APP_LINK_PATH = '/app/'
+const TARGET_SDK = 36
 const GENERATED_TEXT_EXTENSIONS = new Set(['.bat', '.gradle', '.java', '.properties', '.xml'])
 const GENERATED_TEXT_NAMES = new Set(['gradlew'])
 const SKIPPED_DIRECTORIES = new Set(['.gradle', 'build', 'node_modules'])
 const androidProjectPath = resolve('android-twa')
 const manifestPath = resolve('android-twa/app/src/main/AndroidManifest.xml')
+const buildGradlePath = resolve('android-twa/app/build.gradle')
 const source = await readFile(manifestPath, 'utf8')
 const filters = source.match(/<intent-filter android:autoVerify="true">[\s\S]*?<\/intent-filter>/g) || []
 let configured = source
@@ -48,6 +50,33 @@ if (withoutLegacyPackage !== configured) {
 
 if (configured !== source) {
   await writeFile(manifestPath, configured)
+}
+
+const buildGradle = await readFile(buildGradlePath, 'utf8')
+const compileSdkMatches = [...buildGradle.matchAll(/compileSdkVersion\s+(\d+)/g)]
+const targetSdkMatches = [...buildGradle.matchAll(/targetSdkVersion\s+(\d+)/g)]
+
+if (compileSdkMatches.length !== 1 || targetSdkMatches.length !== 1) {
+  throw new Error(
+    `Expected one compileSdkVersion and one targetSdkVersion in ${buildGradlePath}; `
+      + `found ${compileSdkMatches.length} and ${targetSdkMatches.length}.`,
+  )
+}
+
+const compileSdk = Number(compileSdkMatches[0][1])
+const targetSdk = Number(targetSdkMatches[0][1])
+
+if (compileSdk < TARGET_SDK) {
+  throw new Error(`Android compile SDK ${compileSdk} is lower than required target SDK ${TARGET_SDK}.`)
+}
+
+if (targetSdk !== TARGET_SDK) {
+  const configuredBuildGradle = buildGradle.replace(
+    targetSdkMatches[0][0],
+    `targetSdkVersion ${TARGET_SDK}`,
+  )
+  await writeFile(buildGradlePath, configuredBuildGradle)
+  changes.push(`set the Android target SDK to ${TARGET_SDK}`)
 }
 
 async function findGeneratedTextFiles(directory) {
