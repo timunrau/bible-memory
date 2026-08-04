@@ -115,7 +115,7 @@ test('clicking outside the change popover closes it', async ({ page }) => {
   // Directive attaches its document click listener after a 50ms delay
   await page.waitForTimeout(120)
 
-  await page.getByLabel(/Verse Reference/i).click()
+  await page.getByLabel('Reference').click()
   await expect(page.getByTestId('verse-schedule-popover')).toHaveCount(0)
 })
 

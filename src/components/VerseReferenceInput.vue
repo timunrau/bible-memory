@@ -4,7 +4,12 @@
       {{ label }}
     </label>
 
-    <div class="relative rounded-lg border border-border-input bg-overlay focus-within:ring-0 focus-within:border-accent">
+    <div
+      class="relative rounded-lg border bg-overlay focus-within:ring-0"
+      :class="invalid
+        ? 'border-status-error-border focus-within:border-status-error-border'
+        : 'border-border-input focus-within:border-accent'"
+    >
       <div
         v-if="completion"
         class="pointer-events-none absolute inset-0 z-10 flex items-center overflow-hidden whitespace-pre px-4 py-3 text-base leading-6"
@@ -30,14 +35,31 @@
         :placeholder="placeholder"
         :required="required"
         :disabled="disabled"
+        :aria-invalid="invalid ? 'true' : undefined"
+        :aria-describedby="invalid && errorMessageId ? errorMessageId : undefined"
         autocomplete="off"
         autocapitalize="words"
         spellcheck="false"
         class="relative z-0 w-full bg-transparent px-4 py-3 text-base leading-6 text-text-primary outline-none disabled:cursor-not-allowed disabled:opacity-60"
+        :class="{ 'pr-11': invalid }"
         @input="$emit('update:modelValue', $event.target.value)"
         @keydown="handleKeydown"
         @blur="$emit('blur', $event)"
       />
+
+      <svg
+        v-if="invalid"
+        class="pointer-events-none absolute right-3 top-1/2 z-20 h-5 w-5 -translate-y-1/2 text-status-error-text"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        aria-hidden="true"
+      >
+        <circle cx="12" cy="12" r="9" />
+        <path stroke-linecap="round" d="M12 7.5v5.5" />
+        <circle cx="12" cy="16.5" r="0.75" fill="currentColor" stroke="none" />
+      </svg>
     </div>
   </div>
 </template>
@@ -55,7 +77,7 @@ export default {
     },
     label: {
       type: String,
-      default: 'Verse Reference',
+      default: 'Reference',
     },
     modelValue: {
       type: String,
@@ -72,6 +94,14 @@ export default {
     disabled: {
       type: Boolean,
       default: false,
+    },
+    invalid: {
+      type: Boolean,
+      default: false,
+    },
+    errorMessageId: {
+      type: String,
+      default: '',
     },
     type: {
       type: String,

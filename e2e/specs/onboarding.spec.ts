@@ -21,7 +21,7 @@ async function addFirstVerseFromHero(page: Page, {
 
   await page.locator('#reference').fill(reference)
   await page.locator('#content').fill(content)
-  await page.getByRole('button', { name: 'Save Verse' }).click()
+  await page.getByRole('button', { name: 'Add Verse' }).click()
 
   await expect(page.getByTestId('modal-add-verse')).not.toBeVisible()
   return { reference, content }

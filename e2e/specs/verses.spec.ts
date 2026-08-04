@@ -37,9 +37,9 @@ test('add verse: FAB -> New Verse -> reference + content (manual) -> add -> appe
 }) => {
   await openAddVerseModal(page)
 
-  await page.getByLabel(/Verse Reference/i).fill('John 3:16')
-  await page.getByLabel(/Verse Content|Content/i).fill('For God so loved the world.')
-  await page.getByRole('button', { name: /Save Verse/i }).click()
+  await page.getByLabel('Reference').fill('John 3:16')
+  await page.getByLabel('Verse text', { exact: true }).fill('For God so loved the world.')
+  await page.getByRole('button', { name: 'Add Verse' }).click()
 
   await expect(page.getByTestId('modal-add-verse')).not.toBeVisible()
   await expect(page.getByText('John 3:16')).toBeVisible()
@@ -54,7 +54,7 @@ test('add verse: default translation prefills new verses but not existing edits'
   await page.getByRole('button', { name: 'Done' }).click()
 
   await openAddVerseModal(page)
-  await expect(page.getByLabel(/Bible Version|Version/i)).toHaveValue('BSB')
+  await expect(page.getByLabel('Bible version')).toHaveValue('BSB')
   await page.getByRole('button', { name: 'Cancel' }).click()
   await expect(page.getByTestId('modal-add-verse')).not.toBeVisible()
 
@@ -80,7 +80,7 @@ test('add verse: default translation prefills new verses but not existing edits'
   await expect(page.getByText('John 3:16')).toBeVisible()
   await page.getByRole('button', { name: 'Edit verse' }).first().click()
   await expect(page.getByTestId('modal-edit-verse')).toBeVisible()
-  await expect(page.getByLabel(/Bible Version|Version/i)).toHaveValue('NIV')
+  await expect(page.getByLabel('Bible version')).toHaveValue('NIV')
   await page.getByRole('button', { name: 'Cancel' }).click()
   await expect(page.getByTestId('modal-edit-verse')).not.toBeVisible()
 
@@ -89,24 +89,24 @@ test('add verse: default translation prefills new verses but not existing edits'
   await page.getByRole('button', { name: 'Done' }).click()
 
   await openAddVerseModal(page)
-  await expect(page.getByLabel(/Bible Version|Version/i)).toHaveValue('')
+  await expect(page.getByLabel('Bible version')).toHaveValue('')
 })
 
 test('add verse: offers to save a different translation as the default only when needed', async ({ page }) => {
   await openAddVerseModal(page)
 
-  const bibleVersion = page.getByLabel(/Bible Version|Version/i)
+  const bibleVersion = page.getByLabel('Bible version')
   const defaultTranslationOption = page.getByTestId('new-verse-default-bible-version')
 
   await expect(defaultTranslationOption).toHaveCount(0)
   await bibleVersion.fill('niv')
   await expect(defaultTranslationOption).toBeVisible()
-  await expect(page.getByText('Use NIV as the default for new verses')).toBeVisible()
+  await expect(page.getByText('Use NIV by default')).toBeVisible()
 
   await defaultTranslationOption.check()
-  await page.getByLabel(/Verse Reference/i).fill('John 3:16')
-  await page.getByLabel(/Verse Content|Content/i).fill('For God so loved the world.')
-  await page.getByRole('button', { name: /Save Verse/i }).click()
+  await page.getByLabel('Reference').fill('John 3:16')
+  await page.getByLabel('Verse text', { exact: true }).fill('For God so loved the world.')
+  await page.getByRole('button', { name: 'Add Verse' }).click()
 
   await openAddVerseModal(page)
   await expect(bibleVersion).toHaveValue('NIV')
@@ -114,7 +114,7 @@ test('add verse: offers to save a different translation as the default only when
 
   await bibleVersion.fill('esv')
   await expect(defaultTranslationOption).toBeVisible()
-  await expect(page.getByText('Use ESV as the default for new verses')).toBeVisible()
+  await expect(page.getByText('Use ESV by default')).toBeVisible()
 
   await bibleVersion.fill('niv')
   await expect(defaultTranslationOption).toHaveCount(0)
@@ -167,13 +167,13 @@ test('add verse: normalized and overlapping saved references show a subtle warni
   await page.getByTestId('fab-new-verse').click()
 
   await expect(page.getByTestId('modal-add-verse')).toBeVisible()
-  await page.getByLabel(/Verse Reference/i).fill('Jn 3:16')
+  await page.getByLabel('Reference').fill('Jn 3:16')
   await expect(page.getByText('Already in your library: John 3:16 (ESV); John 3:16-17 (NIV)')).toBeVisible()
 })
 
 test('add verse reference input: accepts ghost suggestions by enter, tab, or click', async ({ page }) => {
   await openAddVerseModal(page)
-  const reference = page.getByLabel(/Verse Reference/i)
+  const reference = page.getByLabel('Reference')
 
   await reference.fill('joh')
   await reference.press('Space')
@@ -204,10 +204,10 @@ test('add verse reference input: accepts ghost suggestions by enter, tab, or cli
   await expect(reference).toHaveValue('Philemon ')
 })
 
-test('add verse reference input: normalizes on blur and waits until save to warn about invalid references', async ({ page }) => {
+test('add verse reference input: normalizes valid references and validates invalid references on each blur', async ({ page }) => {
   await openAddVerseModal(page)
-  const reference = page.getByLabel(/Verse Reference/i)
-  const content = page.getByLabel(/Verse Content|Content/i)
+  const reference = page.getByLabel('Reference')
+  const content = page.getByLabel('Verse text', { exact: true })
 
   await reference.fill('john   3 : 16 - 17')
   await content.click()
@@ -219,13 +219,54 @@ test('add verse reference input: normalizes on blur and waits until save to warn
 
   await reference.fill('phil 1:6')
   await content.click()
+  await expect(reference).toHaveAttribute('aria-invalid', 'true')
+  await expect(page.getByText('Use a reference like "John 3:16", "John 3:16-17", or "John 3:36-4:2".')).toBeVisible()
+
+  await reference.fill('John')
+  await expect(reference).not.toHaveAttribute('aria-invalid', 'true')
   await expect(page.getByText(/Use a reference like/i)).toHaveCount(0)
 
+  await reference.fill('still invalid')
+  await expect(reference).not.toHaveAttribute('aria-invalid', 'true')
+  await content.click()
+  await expect(reference).toHaveAttribute('aria-invalid', 'true')
+
   await content.fill('I am sure of this.')
-  await page.getByRole('button', { name: /Save Verse/i }).click()
+  await page.getByRole('button', { name: 'Add Verse' }).click()
 
   await expect(page.getByTestId('modal-add-verse')).toBeVisible()
   await expect(page.getByText('Use a reference like "John 3:16", "John 3:16-17", or "John 3:36-4:2".')).toBeVisible()
+})
+
+test('add verse import: appears only for a valid reference and clears stale offline feedback on edit', async ({ page }) => {
+  await openAddVerseModal(page)
+
+  const reference = page.getByLabel('Reference')
+  const bibleVersion = page.getByLabel('Bible version')
+  const importButton = page.getByRole('button', { name: 'Import verse text' })
+
+  await bibleVersion.fill('BSB')
+  await reference.fill('not a reference')
+  await expect(importButton).toHaveCount(0)
+
+  await reference.fill('John 3:16')
+  await expect(importButton).toBeVisible()
+
+  const bibleRequests: string[] = []
+  page.on('request', request => {
+    if (request.url().includes('fetch.bible')) bibleRequests.push(request.url())
+  })
+
+  await page.context().setOffline(true)
+  await page.evaluate(() => window.dispatchEvent(new Event('offline')))
+  await importButton.click()
+
+  await expect(page.getByText('Verse text import needs an internet connection. You can still paste content manually.')).toBeVisible()
+  expect(bibleRequests).toEqual([])
+
+  await reference.fill('John 3:17')
+  await expect(page.getByText(/Verse text import needs an internet connection/i)).toHaveCount(0)
+  await page.context().setOffline(false)
 })
 
 test('add verse with Bible import: BSB shorthand imports content through the fetch-client v2 API', async ({
@@ -236,14 +277,14 @@ test('add verse with Bible import: BSB shorthand imports content through the fet
   await page.getByTestId('fab-trigger').click()
   await page.getByTestId('fab-new-verse').click()
 
-  await page.getByLabel(/Verse Reference/i).fill('John 3:16')
-  await page.getByLabel(/Bible Version|Version/i).fill('BSB')
-  await page.getByRole('button', { name: /Import Content/i }).click()
+  await page.getByLabel('Reference').fill('John 3:16')
+  await page.getByLabel('Bible version').fill('BSB')
+  await page.getByRole('button', { name: 'Import verse text' }).click()
 
-  await expect(page.getByLabel(/Verse Content|Content/i)).toHaveValue(MOCK_VERSE_CONTENT)
+  await expect(page.getByLabel('Verse text', { exact: true })).toHaveValue(MOCK_VERSE_CONTENT)
   await expect(page.getByText(/Failed to import verse/i)).toHaveCount(0)
 
-  await page.getByRole('button', { name: /Save Verse/i }).click()
+  await page.getByRole('button', { name: 'Add Verse' }).click()
   await expect(page.getByTestId('modal-add-verse')).not.toBeVisible()
   await expect(page.getByText('John 3:16')).toBeVisible()
 
@@ -260,6 +301,30 @@ test('add verse with Bible import: BSB shorthand imports content through the fet
   })
 })
 
+test('verse import: unavailable translations use the same guidance in Add and Edit', async ({ page }) => {
+  await mockBibleApi(page)
+  const copyrightGuidance = 'This translation is copyrighted. Copy the text from one of the links below and paste it into Verse text.'
+  const bsbGuidance = 'Or try the BSB translation to fill in the verse text automatically.'
+
+  await openAddVerseModal(page)
+  await page.getByLabel('Reference').fill('John 3:16')
+  await page.getByLabel('Bible version').fill('NIV')
+  await page.getByRole('button', { name: 'Import verse text' }).click()
+
+  await expect(page.getByText(copyrightGuidance)).toBeVisible()
+  await expect(page.getByText(bsbGuidance)).toBeVisible()
+  await page.getByRole('button', { name: 'Cancel' }).click()
+
+  await seedStorage(page, sampleVerses, [])
+  await gotoApp(page, '?view=collections')
+  await page.getByRole('button', { name: 'Edit verse' }).first().click()
+  await page.getByLabel('Bible version').fill('NIV')
+  await page.getByRole('button', { name: 'Import verse text' }).click()
+
+  await expect(page.getByText(copyrightGuidance)).toBeVisible()
+  await expect(page.getByText(bsbGuidance)).toBeVisible()
+})
+
 test('edit verse: search on Verses tab -> edit -> change content -> save', async ({ page }) => {
   await seedStorage(page, sampleVerses, [])
   await gotoApp(page, '?view=collections')
@@ -269,11 +334,36 @@ test('edit verse: search on Verses tab -> edit -> change content -> save', async
   await page.getByRole('button', { name: 'Edit verse' }).first().click()
 
   await expect(page.getByTestId('modal-edit-verse')).toBeVisible()
-  await page.getByLabel(/Verse Content|Content/i).fill('Updated verse content.')
+  await page.getByLabel('Verse text', { exact: true }).fill('Updated verse content.')
   await page.getByRole('button', { name: /^Save$/i }).click()
 
   await expect(page.getByTestId('modal-edit-verse')).not.toBeVisible()
   await expect(page.getByText('Updated verse content.')).toBeVisible()
+})
+
+test('edit verse: reference errors wait for blur and a version-only change reveals import', async ({ page }) => {
+  await seedStorage(page, sampleVerses, [])
+  await gotoApp(page, '?view=collections')
+  await page.getByRole('button', { name: 'Edit verse' }).first().click()
+
+  const reference = page.getByLabel('Reference')
+  const content = page.getByLabel('Verse text', { exact: true })
+  const bibleVersion = page.getByLabel('Bible version')
+  const importButton = page.getByRole('button', { name: 'Import verse text' })
+
+  await expect(importButton).toHaveCount(0)
+  await reference.fill('')
+  await expect(reference).not.toHaveAttribute('aria-invalid', 'true')
+
+  await content.click()
+  await expect(reference).toHaveAttribute('aria-invalid', 'true')
+
+  await reference.fill('John 3:16')
+  await expect(reference).not.toHaveAttribute('aria-invalid', 'true')
+  await expect(page.getByText(/Use a reference like/i)).toHaveCount(0)
+
+  await bibleVersion.fill('NIV')
+  await expect(importButton).toBeVisible()
 })
 
 test('edit verse: changing the reference shows duplicate warnings but ignores the verse itself', async ({ page }) => {
@@ -286,7 +376,7 @@ test('edit verse: changing the reference shows duplicate warnings but ignores th
 
   await expect(page.getByTestId('modal-edit-verse')).toBeVisible()
   await expect(page.getByText(/Already in your library:/i)).toHaveCount(0)
-  await page.getByLabel(/Verse Reference/i).fill('Ps 23:1')
+  await page.getByLabel('Reference').fill('Ps 23:1')
   await expect(page.getByText('Already in your library: Psalm 23:1 (BSB)')).toBeVisible()
 })
 

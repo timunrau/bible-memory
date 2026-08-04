@@ -1541,104 +1541,31 @@
   </transition>
 
       <!-- Add Verse Form Modal -->
-      <ModalSheet :show="showForm" title="Add New Verse" data-testid="modal-add-verse" @close="closeForm">
-        <form id="add-verse-form" @submit.prevent="addVerse" class="space-y-4">
-          <div>
-            <VerseReferenceInput
-              id="reference"
-              v-model="newVerse.reference"
-              placeholder="e.g., Joshua 1:8-9"
-              required
-              @blur="handleNewVerseReferenceBlur"
-            />
-            <p v-if="newVerseReferenceWarning" class="mt-2 text-xs leading-relaxed" :class="newVerseReferenceWarningClass">
-              {{ newVerseReferenceWarning }}
-            </p>
-          </div>
-
-          <div>
-            <label for="bible-version" class="block text-sm font-medium text-text-secondary mb-2">
-              Bible Version
-            </label>
-            <input
-              id="bible-version"
-              v-model="newVerse.bibleVersion"
-              type="text"
-              placeholder="e.g., BSB, NIV, ESV"
-              maxlength="10"
-              class="w-full px-4 py-3 border border-border-input rounded-lg focus:ring-0 focus:border-accent outline-none bg-overlay text-text-primary uppercase tracking-wider"
-              style="text-transform: uppercase;"
-              @input="handleNewVerseBibleVersionInput"
-            />
-            <label
-              v-if="showNewVerseDefaultBibleVersionOption"
-              class="mt-2 ml-4 flex w-fit cursor-pointer items-center gap-1.5 text-sm text-text-secondary"
-            >
-              <input
-                v-model="useNewVerseBibleVersionAsDefault"
-                type="checkbox"
-                data-testid="new-verse-default-bible-version"
-                class="h-4 w-4 rounded border-border-input accent-accent-strong"
-              />
-              <span>Use {{ newVerseBibleVersionLabel }} as the default for new verses</span>
-            </label>
-          </div>
-
-          <div>
-            <button
-              type="button"
-              @click="importVerseContent()"
-              :disabled="!newVerse.reference || !newVerse.bibleVersion || importingVerse || !isOnline"
-              class="btn-secondary btn--sm"
-            >
-              <svg v-if="importingVerse" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <span>{{ !isOnline ? 'Offline' : importingVerse ? 'Importing...' : 'Import Content' }}</span>
-            </button>
-            <p v-if="!isOnline" class="mt-2 text-sm text-text-muted">
-              Verse text import needs the internet. You can still paste content manually.
-            </p>
-
-            <div v-if="importError" ref="importErrorRef" class="mt-2 p-3 bg-status-amber-bg border border-status-amber-border rounded-lg space-y-2">
-              <template v-if="importErrorShowLink">
-                <p class="text-sm text-status-amber-text">This translation is copyrighted. Copy the text from one of the links below and paste it into <strong>Verse Content</strong>.</p>
-                <div class="flex flex-wrap gap-2">
-                  <a :href="getBibleGatewayUrl(newVerse)" target="_blank" rel="noopener noreferrer" class="inline-flex items-center px-3 py-1 rounded-full border border-status-amber-border text-sm text-status-purple-text hover:bg-status-amber-border transition-colors">Bible Gateway</a>
-                  <a v-if="getYouVersionUrl(newVerse)" :href="getYouVersionUrl(newVerse)" target="_blank" rel="noopener noreferrer" class="inline-flex items-center px-3 py-1 rounded-full border border-status-amber-border text-sm text-status-purple-text hover:bg-status-amber-border transition-colors">YouVersion</a>
-                </div>
-                <p class="text-sm text-status-amber-text">Or try the BSB translation to fill in the verse content automatically.</p>
-                <a
-                  href="https://fetch.bible/content/need/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="text-sm text-status-purple-text hover:underline inline-block"
-                >
-                  Find out why popular Bibles can't be freely shared
-                </a>
-              </template>
-              <p v-else class="text-sm text-status-amber-text">{{ importError }}</p>
-            </div>
-          </div>
-
-          <div>
-            <label for="content" class="block text-sm font-medium text-text-secondary mb-2">
-              Verse Content
-            </label>
-            <textarea
-              id="content"
-              v-model="newVerse.content"
-              rows="6"
-              placeholder="Enter the verse text here..."
-              required
-              class="w-full px-4 py-3 border border-border-input rounded-lg focus:ring-0 focus:border-accent outline-none bg-overlay text-text-primary resize-none"
-            ></textarea>
-          </div>
-
-          <CollectionPicker
+      <ModalSheet :show="showForm" title="New Verse" data-testid="modal-add-verse" @close="closeForm">
+        <form id="add-verse-form" @submit.prevent="addVerse">
+          <VerseFormFields
+            v-model="newVerse"
+            reference-id="reference"
+            bible-version-id="bible-version"
+            content-id="content"
             :collections="sortedCollections"
-            v-model="newVerse.collectionIds"
+            :reference-warning="newVerseReferenceWarning"
+            :reference-warning-class="newVerseReferenceWarningClass"
+            :reference-invalid="newVerseReferenceInvalid"
+            :show-default-bible-version-option="showNewVerseDefaultBibleVersionOption"
+            :use-bible-version-as-default="useNewVerseBibleVersionAsDefault"
+            :bible-version-label="newVerseBibleVersionLabel"
+            :importing="importingVerse"
+            :import-error="importError"
+            :import-error-show-link="importErrorShowLink"
+            :bible-gateway-url="getBibleGatewayUrl(newVerse)"
+            :you-version-url="getYouVersionUrl(newVerse)"
+            @reference-input="handleNewVerseReferenceInput"
+            @reference-blur="handleNewVerseReferenceBlur"
+            @citation-input="clearImportFeedback"
+            @bible-version-input="handleNewVerseBibleVersionInput"
+            @update-default-bible-version="useNewVerseBibleVersionAsDefault = $event"
+            @import="importVerseContent()"
           />
         </form>
 
@@ -1656,7 +1583,7 @@
               form="add-verse-form"
               class="btn-primary"
             >
-              Save Verse
+              Add Verse
             </button>
           </div>
         </template>
@@ -1665,88 +1592,25 @@
       <!-- Edit Verse Form Modal -->
       <ModalSheet :show="showEditVerseForm" title="Edit Verse" data-testid="modal-edit-verse" @close="closeEditVerseForm">
         <form id="edit-verse-form" @submit.prevent="saveEditedVerse" class="space-y-4" v-if="editingVerse">
-          <div>
-            <VerseReferenceInput
-              id="edit-reference"
-              v-model="editingVerse.reference"
-              placeholder="e.g., Joshua 1:8-9"
-              required
-              @blur="handleEditedVerseReferenceBlur"
-            />
-            <p v-if="editedVerseReferenceWarning" class="mt-2 text-xs leading-relaxed" :class="editedVerseReferenceWarningClass">
-              {{ editedVerseReferenceWarning }}
-            </p>
-          </div>
-
-          <div>
-            <label for="edit-bible-version" class="block text-sm font-medium text-text-secondary mb-2">
-              Bible Version
-            </label>
-            <input
-              id="edit-bible-version"
-              v-model="editingVerse.bibleVersion"
-              type="text"
-              placeholder="e.g., BSB, NIV, ESV"
-              maxlength="10"
-              class="w-full px-4 py-3 border border-border-input rounded-lg focus:ring-0 focus:border-accent outline-none bg-overlay text-text-primary uppercase tracking-wider"
-              style="text-transform: uppercase;"
-            />
-          </div>
-
-          <div v-if="hasEditedReferenceChanged">
-            <button
-              type="button"
-              @click="importVerseContent(editingVerse)"
-              :disabled="!editingVerse.reference || !editingVerse.bibleVersion || importingVerse || !isOnline"
-              class="btn-secondary btn--sm"
-            >
-              <svg v-if="importingVerse" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <span>{{ !isOnline ? 'Offline' : importingVerse ? 'Importing...' : 'Import Content' }}</span>
-            </button>
-            <p v-if="!isOnline" class="mt-2 text-sm text-text-muted">
-              Verse text import needs the internet. You can still paste content manually.
-            </p>
-
-            <div v-if="importError" ref="importErrorRef" class="mt-2 p-3 bg-status-amber-bg border border-status-amber-border rounded-lg space-y-2">
-              <template v-if="importErrorShowLink">
-                <p class="text-sm text-status-amber-text">This translation is copyrighted. Copy the text from one of the links below and paste it into <strong>Verse Content</strong>.</p>
-                <div class="flex flex-wrap gap-2">
-                  <a :href="getBibleGatewayUrl(editingVerse)" target="_blank" rel="noopener noreferrer" class="inline-flex items-center px-3 py-1 rounded-full border border-status-amber-border text-sm text-status-purple-text hover:bg-status-amber-border transition-colors">Bible Gateway</a>
-                  <a v-if="getYouVersionUrl(editingVerse)" :href="getYouVersionUrl(editingVerse)" target="_blank" rel="noopener noreferrer" class="inline-flex items-center px-3 py-1 rounded-full border border-status-amber-border text-sm text-status-purple-text hover:bg-status-amber-border transition-colors">YouVersion</a>
-                </div>
-                <a
-                  href="https://fetch.bible/content/need/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="text-sm text-status-purple-text hover:underline inline-block"
-                >
-                  Find out why popular Bibles can't be freely shared
-                </a>
-              </template>
-              <p v-else class="text-sm text-status-amber-text">{{ importError }}</p>
-            </div>
-          </div>
-
-          <div>
-            <label for="edit-content" class="block text-sm font-medium text-text-secondary mb-2">
-              Verse Content
-            </label>
-            <textarea
-              id="edit-content"
-              v-model="editingVerse.content"
-              rows="6"
-              placeholder="Enter the verse text here..."
-              required
-              class="w-full px-4 py-3 border border-border-input rounded-lg focus:ring-0 focus:border-accent outline-none bg-overlay text-text-primary resize-none"
-            ></textarea>
-          </div>
-
-          <CollectionPicker
+          <VerseFormFields
+            v-model="editingVerse"
+            reference-id="edit-reference"
+            bible-version-id="edit-bible-version"
+            content-id="edit-content"
             :collections="sortedCollections"
-            v-model="editingVerse.collectionIds"
+            :reference-warning="editedVerseReferenceWarning"
+            :reference-warning-class="editedVerseReferenceWarningClass"
+            :reference-invalid="editedVerseReferenceInvalid"
+            :show-import="hasEditedCitationChanged"
+            :importing="importingVerse"
+            :import-error="importError"
+            :import-error-show-link="importErrorShowLink"
+            :bible-gateway-url="getBibleGatewayUrl(editingVerse)"
+            :you-version-url="getYouVersionUrl(editingVerse)"
+            @reference-input="handleEditedVerseReferenceInput"
+            @reference-blur="handleEditedVerseReferenceBlur"
+            @citation-input="clearImportFeedback"
+            @import="importVerseContent(editingVerse)"
           />
 
           <div
@@ -2548,7 +2412,7 @@ import CompletionTray from './components/CompletionTray.vue'
 import ModalSheet from './components/ModalSheet.vue'
 import AppDialog from './components/AppDialog.vue'
 import CollectionPicker from './components/CollectionPicker.vue'
-import VerseReferenceInput from './components/VerseReferenceInput.vue'
+import VerseFormFields from './components/VerseFormFields.vue'
 import CollectionsAlmanac from './components/CollectionsAlmanac.vue'
 import SyncSettingsModal from './components/SyncSettingsModal.vue'
 import BackupNudgeCard from './components/BackupNudgeCard.vue'
@@ -2566,7 +2430,7 @@ ChartJS.register(
 
 export default {
   name: 'App',
-  components: { IOSInstallModal, VersePracticeView, CompletionTray, ModalSheet, AppDialog, CollectionPicker, VerseReferenceInput, CollectionsAlmanac, SyncSettingsModal, BackupNudgeCard, Line, Bar, AppShell, BrandMark, PrimaryButton, SecondaryButton, HeadwordReference, POSBadge },
+  components: { IOSInstallModal, VersePracticeView, CompletionTray, ModalSheet, AppDialog, CollectionPicker, VerseFormFields, CollectionsAlmanac, SyncSettingsModal, BackupNudgeCard, Line, Bar, AppShell, BrandMark, PrimaryButton, SecondaryButton, HeadwordReference, POSBadge },
   setup() {
     const verses = ref([])
     const collections = ref([])
@@ -3011,7 +2875,6 @@ export default {
     const importingVerse = ref(false)
     const importError = ref(null)
     const importErrorShowLink = ref(false)
-    const importErrorRef = ref(null)
     const bibleClient = ref(null)
     const bibleCollection = ref(null)
     const newVerseReferenceTouched = ref(false)
@@ -3048,22 +2911,36 @@ export default {
     }
 
     const handleNewVerseReferenceBlur = () => {
+      newVerseReferenceTouched.value = true
       normalizeVerseDraftReference(newVerse.value)
     }
 
+    const handleNewVerseReferenceInput = () => {
+      newVerseReferenceTouched.value = false
+    }
+
     const handleEditedVerseReferenceBlur = () => {
+      editedVerseReferenceTouched.value = true
       normalizeVerseDraftReference(editingVerse.value)
+    }
+
+    const handleEditedVerseReferenceInput = () => {
+      editedVerseReferenceTouched.value = false
     }
 
     const getReferenceValidationWarning = (verseDraft, shouldShow) => {
       const reference = getVerseDraftField(verseDraft, 'reference')
-      if (!reference || !shouldShow) return ''
+      if (!shouldShow) return ''
       return parseVerseSpanReference(reference) ? '' : invalidReferenceMessage
     }
 
-    const resetImportState = () => {
+    const clearImportFeedback = () => {
       importError.value = null
       importErrorShowLink.value = false
+    }
+
+    const resetImportState = () => {
+      clearImportFeedback()
       importingVerse.value = false
     }
 
@@ -3088,9 +2965,11 @@ export default {
       return `https://www.bible.com/bible/${versionId}/${usfmBook}.${parsed.startChapter}.${verseRef}.${version}`
     }
 
-    const hasEditedReferenceChanged = computed(() => {
+    const hasEditedCitationChanged = computed(() => {
       if (!editingVerse.value) return false
-      return getVerseDraftField(editingVerse.value, 'reference') !== getVerseDraftField(editingVerse.value, 'originalReference')
+      const referenceChanged = getVerseDraftField(editingVerse.value, 'reference') !== getVerseDraftField(editingVerse.value, 'originalReference')
+      const versionChanged = getVerseDraftField(editingVerse.value, 'bibleVersion').toUpperCase() !== getVerseDraftField(editingVerse.value, 'originalBibleVersion').toUpperCase()
+      return referenceChanged || versionChanged
     })
 
     const newVerseReferenceMatches = computed(() => (
@@ -3106,7 +2985,11 @@ export default {
     ))
 
     const newVerseReferenceWarningClass = computed(() => (
-      newVerseReferenceValidationWarning.value ? 'text-status-amber-text' : 'text-text-muted'
+      newVerseReferenceValidationWarning.value ? 'text-status-error-text' : 'text-text-muted'
+    ))
+
+    const newVerseReferenceInvalid = computed(() => (
+      Boolean(newVerseReferenceValidationWarning.value)
     ))
 
     const editedVerseReferenceMatches = computed(() => {
@@ -3126,7 +3009,11 @@ export default {
     ))
 
     const editedVerseReferenceWarningClass = computed(() => (
-      editedVerseReferenceValidationWarning.value ? 'text-status-amber-text' : 'text-text-muted'
+      editedVerseReferenceValidationWarning.value ? 'text-status-error-text' : 'text-text-muted'
+    ))
+
+    const editedVerseReferenceInvalid = computed(() => (
+      Boolean(editedVerseReferenceValidationWarning.value)
     ))
 
     const newVerse = ref({
@@ -5683,7 +5570,6 @@ export default {
           importError.value = `${version.toUpperCase()} is not available for import.`
           importErrorShowLink.value = true
           importingVerse.value = false
-          nextTick(() => importErrorRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
           return
         }
 
@@ -6812,6 +6698,7 @@ export default {
       editingVerse.value = {
         ...verse,
         originalReference: verse.reference,
+        originalBibleVersion: verse.bibleVersion,
         collectionIds: verse.collectionIds ? [...verse.collectionIds] : []
       }
       showEditVerseForm.value = true
@@ -9945,16 +9832,20 @@ export default {
       importingVerse,
       importError,
       importErrorShowLink,
-      importErrorRef,
+      clearImportFeedback,
       getBibleGatewayUrl,
       getYouVersionUrl,
-      hasEditedReferenceChanged,
+      hasEditedCitationChanged,
+      handleNewVerseReferenceInput,
       handleNewVerseReferenceBlur,
+      handleEditedVerseReferenceInput,
       handleEditedVerseReferenceBlur,
       newVerseReferenceWarning,
       newVerseReferenceWarningClass,
+      newVerseReferenceInvalid,
       editedVerseReferenceWarning,
       editedVerseReferenceWarningClass,
+      editedVerseReferenceInvalid,
       importVerseContent,
       isPWAInstalled,
       isIOSSafari,
