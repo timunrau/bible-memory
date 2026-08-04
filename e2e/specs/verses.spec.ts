@@ -92,6 +92,39 @@ test('add verse: default translation prefills new verses but not existing edits'
   await expect(page.getByLabel(/Bible Version|Version/i)).toHaveValue('')
 })
 
+test('add verse: offers to save a different translation as the default only when needed', async ({ page }) => {
+  await openAddVerseModal(page)
+
+  const bibleVersion = page.getByLabel(/Bible Version|Version/i)
+  const defaultTranslationOption = page.getByTestId('new-verse-default-bible-version')
+
+  await expect(defaultTranslationOption).toHaveCount(0)
+  await bibleVersion.fill('niv')
+  await expect(defaultTranslationOption).toBeVisible()
+  await expect(page.getByText('Use NIV as the default for new verses')).toBeVisible()
+
+  await defaultTranslationOption.check()
+  await page.getByLabel(/Verse Reference/i).fill('John 3:16')
+  await page.getByLabel(/Verse Content|Content/i).fill('For God so loved the world.')
+  await page.getByRole('button', { name: /Save Verse/i }).click()
+
+  await openAddVerseModal(page)
+  await expect(bibleVersion).toHaveValue('NIV')
+  await expect(defaultTranslationOption).toHaveCount(0)
+
+  await bibleVersion.fill('esv')
+  await expect(defaultTranslationOption).toBeVisible()
+  await expect(page.getByText('Use ESV as the default for new verses')).toBeVisible()
+
+  await bibleVersion.fill('niv')
+  await expect(defaultTranslationOption).toHaveCount(0)
+  await page.getByRole('button', { name: 'Cancel' }).click()
+
+  await page.getByRole('button', { name: 'Edit verse' }).click()
+  await expect(page.getByTestId('modal-edit-verse')).toBeVisible()
+  await expect(defaultTranslationOption).toHaveCount(0)
+})
+
 test('add verse: normalized and overlapping saved references show a subtle warning', async ({ page }) => {
   const verses = [
     {

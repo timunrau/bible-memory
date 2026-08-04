@@ -1568,7 +1568,20 @@
               maxlength="10"
               class="w-full px-4 py-3 border border-border-input rounded-lg focus:ring-0 focus:border-accent outline-none bg-overlay text-text-primary uppercase tracking-wider"
               style="text-transform: uppercase;"
+              @input="handleNewVerseBibleVersionInput"
             />
+            <label
+              v-if="showNewVerseDefaultBibleVersionOption"
+              class="mt-2 ml-4 flex w-fit cursor-pointer items-center gap-1.5 text-sm text-text-secondary"
+            >
+              <input
+                v-model="useNewVerseBibleVersionAsDefault"
+                type="checkbox"
+                data-testid="new-verse-default-bible-version"
+                class="h-4 w-4 rounded border-border-input accent-accent-strong"
+              />
+              <span>Use {{ newVerseBibleVersionLabel }} as the default for new verses</span>
+            </label>
           </div>
 
           <div>
@@ -3002,6 +3015,7 @@ export default {
     const bibleClient = ref(null)
     const bibleCollection = ref(null)
     const newVerseReferenceTouched = ref(false)
+    const useNewVerseBibleVersionAsDefault = ref(false)
     const editedVerseReferenceTouched = ref(false)
     const invalidReferenceMessage = 'Use a reference like "John 3:16", "John 3:16-17", or "John 3:36-4:2".'
 
@@ -3121,6 +3135,33 @@ export default {
       bibleVersion: '',
       collectionIds: []
     })
+
+    const newVerseBibleVersionLabel = computed(() => (
+      getVerseDraftField(newVerse.value, 'bibleVersion').toUpperCase()
+    ))
+
+    const showNewVerseDefaultBibleVersionOption = computed(() => {
+      if (!newVerseBibleVersionLabel.value) return false
+
+      const defaultBibleVersion = getVerseDraftField(appSettings.value, 'defaultBibleVersion').toUpperCase()
+      return newVerseBibleVersionLabel.value !== defaultBibleVersion
+    })
+
+    const resetNewVerseDefaultBibleVersionOption = () => {
+      useNewVerseBibleVersionAsDefault.value = false
+    }
+
+    const handleNewVerseBibleVersionInput = () => {
+      if (!newVerseBibleVersionLabel.value) {
+        useNewVerseBibleVersionAsDefault.value = false
+        return
+      }
+
+      const defaultBibleVersion = getVerseDraftField(appSettings.value, 'defaultBibleVersion').toUpperCase()
+      if (newVerseBibleVersionLabel.value === defaultBibleVersion) {
+        useNewVerseBibleVersionAsDefault.value = false
+      }
+    }
 
     const getAssignableCurrentCollectionId = () => (
       currentCollectionId.value && !VIRTUAL_COLLECTION_IDS.has(currentCollectionId.value)
@@ -3273,6 +3314,7 @@ export default {
     const openHeroVerseModal = () => {
       trackEvent('onboarding_add_verse_clicked')
       newVerseReferenceTouched.value = false
+      resetNewVerseDefaultBibleVersionOption()
       showForm.value = true
       pushModalState('addVerse')
     }
@@ -3395,6 +3437,7 @@ export default {
       showForm.value = false
       newVerse.value = createEmptyVerseDraft()
       newVerseReferenceTouched.value = false
+      resetNewVerseDefaultBibleVersionOption()
       importError.value = null
       importErrorShowLink.value = false
       importingVerse.value = false
@@ -5551,6 +5594,12 @@ export default {
           masteredAt: null,
           collectionIds: collectionIds
         }
+        if (useNewVerseBibleVersionAsDefault.value && showNewVerseDefaultBibleVersionOption.value) {
+          saveAppSettingsLocally({
+            ...appSettings.value,
+            defaultBibleVersion: verse.bibleVersion
+          }, false)
+        }
         verses.value.unshift(verse)
         saveVerses()
         trackEvent('verse_added', { count: verses.value.length })
@@ -5567,6 +5616,7 @@ export default {
       showForm.value = false
       newVerse.value = createEmptyVerseDraft()
       newVerseReferenceTouched.value = false
+      resetNewVerseDefaultBibleVersionOption()
       fabMenuOpen.value = false
       resetImportState()
       consumeModalState('addVerse')
@@ -5747,6 +5797,7 @@ export default {
       const collectionId = getAssignableCurrentCollectionId()
       newVerse.value = createEmptyVerseDraft(collectionId ? [collectionId] : [])
       newVerseReferenceTouched.value = false
+      resetNewVerseDefaultBibleVersionOption()
       showForm.value = true
       pushModalState('addVerse')
     }
@@ -9610,6 +9661,10 @@ export default {
       verses,
       showForm,
       newVerse,
+      newVerseBibleVersionLabel,
+      showNewVerseDefaultBibleVersionOption,
+      useNewVerseBibleVersionAsDefault,
+      handleNewVerseBibleVersionInput,
       addVerse,
       closeForm,
       reviewingVerse,
