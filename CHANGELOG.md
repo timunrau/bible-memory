@@ -1,3 +1,10 @@
+# [1.42.0](https://github.com/timunrau/rum1n8/compare/v1.41.0...v1.42.0) (2026-08-04)
+
+
+### Features
+
+* offer to save default Bible translation ([6107a64](https://github.com/timunrau/rum1n8/commit/6107a64e911c55628a08d4eb318b9f9cc94fc1c5))
+
 # [1.41.0](https://github.com/timunrau/rum1n8/compare/v1.40.1...v1.41.0) (2026-08-03)
 
 
