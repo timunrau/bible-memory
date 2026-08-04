@@ -1,3 +1,10 @@
+# [1.43.0](https://github.com/timunrau/rum1n8/compare/v1.42.0...v1.43.0) (2026-08-04)
+
+
+### Features
+
+* refine verse form interactions ([17d3cdb](https://github.com/timunrau/rum1n8/commit/17d3cdb80ca83ff40492f0b59bf5ca9bae3f8bf1))
+
 # [1.42.0](https://github.com/timunrau/rum1n8/compare/v1.41.0...v1.42.0) (2026-08-04)
 
 
