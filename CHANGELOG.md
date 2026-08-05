@@ -1,3 +1,10 @@
+# [1.44.0](https://github.com/timunrau/rum1n8/compare/v1.43.0...v1.44.0) (2026-08-05)
+
+
+### Features
+
+* support chapter references ([07c65d8](https://github.com/timunrau/rum1n8/commit/07c65d8454bfe7ba262d6f61b54378b1b1b02150))
+
 # [1.43.0](https://github.com/timunrau/rum1n8/compare/v1.42.0...v1.43.0) (2026-08-04)
 
 
