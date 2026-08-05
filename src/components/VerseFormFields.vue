@@ -5,7 +5,7 @@
         :id="referenceId"
         :model-value="modelValue.reference"
         class="w-full sm:max-w-80"
-        placeholder="e.g., Joshua 1:8-9"
+        placeholder="e.g., Joshua 1:8-9 or Psalm 1"
         required
         :invalid="referenceInvalid"
         :error-message-id="referenceFeedbackId"
@@ -20,7 +20,10 @@
           :class="referenceWarningClass"
           :role="referenceInvalid ? 'alert' : undefined"
         >
-          {{ displayedReferenceWarning }}
+          <span class="block">{{ displayedReferenceWarning }}</span>
+          <span v-if="referenceInvalid" class="mt-1 block text-text-muted">
+            Examples: John 3:16 · John 3:16–17 · John 3:36–4:2 · Psalm 1 · Psalm 1–3
+          </span>
         </p>
       </Transition>
     </div>

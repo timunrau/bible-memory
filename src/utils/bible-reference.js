@@ -186,47 +186,81 @@ export function parseVerseSpanReference(reference = '') {
   const trimmed = reference.trim().replace(/\s+/g, ' ')
   if (!trimmed || trimmed.includes(',')) return null
 
-  const match = trimmed.match(/^(.+?)\s+(\d+)\s*:\s*(\d+)(?:\s*-\s*(?:(\d+)\s*:\s*)?(\d+))?$/)
-  if (!match) return null
+  const verseMatch = trimmed.match(/^(.+?)\s+(\d+)\s*:\s*(\d+)(?:\s*-\s*(?:(\d+)\s*:\s*)?(\d+))?$/)
+  const chapterMatch = verseMatch
+    ? null
+    : trimmed.match(/^(.+?)\s+(\d+)(?:\s*-\s*(\d+))?$/)
+  if (!verseMatch && !chapterMatch) return null
 
+  const match = verseMatch || chapterMatch
   const book = getBibleBook(match[1])
-  const startChapter = parseInt(match[2], 10)
-  const startVerse = parseInt(match[3], 10)
-  const endChapter = match[4] ? parseInt(match[4], 10) : startChapter
-  const endVerse = match[5] ? parseInt(match[5], 10) : startVerse
+  if (!book) return null
 
-  if (!book || startChapter < 1 || startVerse < 1 || endChapter < 1 || endVerse < 1) {
-    return null
+  let passage
+  let canonicalReference
+  let normalizedVerses
+  let isWholeChapter = false
+
+  if (verseMatch) {
+    const startChapter = parseInt(verseMatch[2], 10)
+    const startVerse = parseInt(verseMatch[3], 10)
+    const endChapter = verseMatch[4] ? parseInt(verseMatch[4], 10) : startChapter
+    const endVerse = verseMatch[5] ? parseInt(verseMatch[5], 10) : startVerse
+
+    if (startChapter < 1 || startVerse < 1 || endChapter < 1 || endVerse < 1) return null
+
+    passage = new PassageReference({
+      book: book.id,
+      start_chapter: startChapter,
+      start_verse: startVerse,
+      end_chapter: endChapter,
+      end_verse: endVerse
+    })
+
+    if (!passage.args_valid || !['verse', 'range_verses', 'range_multi'].includes(passage.type)) {
+      return null
+    }
+
+    canonicalReference = passage.toString(BOOK_NAMES_BY_ID)
+    normalizedVerses = passage.get_verses_string()
+  } else {
+    const startChapter = parseInt(chapterMatch[2], 10)
+    const hasEndChapter = Boolean(chapterMatch[3])
+    const endChapter = hasEndChapter ? parseInt(chapterMatch[3], 10) : null
+
+    if (startChapter < 1 || (hasEndChapter && endChapter <= startChapter)) return null
+
+    passage = new PassageReference({
+      book: book.id,
+      start_chapter: startChapter,
+      ...(hasEndChapter ? { end_chapter: endChapter } : {})
+    })
+
+    const validTypes = hasEndChapter ? ['range_chapters'] : ['chapter', 'book']
+    if (!passage.args_valid || !validTypes.includes(passage.type)) return null
+
+    normalizedVerses = `${startChapter}${hasEndChapter ? `-${endChapter}` : ''}`
+    canonicalReference = `${book.name} ${normalizedVerses}`
+    isWholeChapter = !hasEndChapter
   }
 
-  const passage = new PassageReference({
-    book: book.id,
-    start_chapter: startChapter,
-    start_verse: startVerse,
-    end_chapter: endChapter,
-    end_verse: endVerse
-  })
-
-  if (!passage.args_valid || !['verse', 'range_verses', 'range_multi'].includes(passage.type)) {
-    return null
-  }
-
-  const canonicalReference = passage.toString(BOOK_NAMES_BY_ID)
-  const normalizedVerses = passage.get_verses_string()
+  const passageStart = passage.get_start()
+  const passageEnd = passage.get_end()
 
   return {
     bookName: book.name,
     bookId: book.id,
-    chapter: passage.start_chapter,
-    verseStart: passage.start_verse,
-    verseEnd: passage.end_verse,
-    startChapter: passage.start_chapter,
-    startVerse: passage.start_verse,
-    endChapter: passage.end_chapter,
-    endVerse: passage.end_verse,
+    chapter: passageStart.start_chapter,
+    verseStart: passageStart.start_verse,
+    verseEnd: passageEnd.end_verse,
+    startChapter: passageStart.start_chapter,
+    startVerse: passageStart.start_verse,
+    endChapter: passageEnd.end_chapter,
+    endVerse: passageEnd.end_verse,
     canonicalReference,
     normalized: `${book.id} ${normalizedVerses}`,
     totalVerses: passage.total_verses(),
+    isWholeChapter,
     passage
   }
 }
@@ -277,10 +311,16 @@ export function combineVerseSpans(references = []) {
 }
 
 function referencesOverlap(referenceA, referenceB) {
+  return referenceA.bookId === referenceB.bookId && referenceA.passage.overlaps(referenceB.passage)
+}
+
+function referencesCoverSameSpan(referenceA, referenceB) {
   return (
     referenceA.bookId === referenceB.bookId &&
-    !referenceA.passage.is_before(referenceB.startChapter, referenceB.startVerse) &&
-    !referenceA.passage.is_after(referenceB.endChapter, referenceB.endVerse)
+    referenceA.startChapter === referenceB.startChapter &&
+    referenceA.startVerse === referenceB.startVerse &&
+    referenceA.endChapter === referenceB.endChapter &&
+    referenceA.endVerse === referenceB.endVerse
   )
 }
 
@@ -297,7 +337,7 @@ export function findReferenceMatches(reference = '', verses = [], options = {}) 
       const parsedExisting = parseVerseSpanReference(verse.reference || '')
       if (!parsedExisting) return null
 
-      const exact = parsedReference.normalized === parsedExisting.normalized
+      const exact = referencesCoverSameSpan(parsedReference, parsedExisting)
       const overlap = !exact && referencesOverlap(parsedReference, parsedExisting)
       if (!exact && !overlap) return null
 

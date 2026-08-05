@@ -102,6 +102,8 @@ describe('normalizeVerseReference', () => {
     expect(normalizeVerseReference('john   3 : 16')).toBe('John 3:16')
     expect(normalizeVerseReference('john 3:16 - 17')).toBe('John 3:16-17')
     expect(normalizeVerseReference('john 3:36 - 4 : 2')).toBe('John 3:36-4:2')
+    expect(normalizeVerseReference('psalm   1')).toBe('Psalms 1')
+    expect(normalizeVerseReference('psalm 1 - 3')).toBe('Psalms 1-3')
   })
 
   it('normalizes only valid supported references', () => {
@@ -133,11 +135,50 @@ describe('parseVerseSpanReference', () => {
     })
   })
 
+  it('expands whole chapters and chapter ranges to their actual verse boundaries', () => {
+    expect(parseVerseSpanReference('Psalm 1')).toMatchObject({
+      bookId: 'psa',
+      startChapter: 1,
+      startVerse: 1,
+      endChapter: 1,
+      endVerse: 6,
+      canonicalReference: 'Psalms 1',
+      totalVerses: 6
+    })
+
+    expect(parseVerseSpanReference('Psalm 1-3')).toMatchObject({
+      bookId: 'psa',
+      startChapter: 1,
+      startVerse: 1,
+      endChapter: 3,
+      endVerse: 8,
+      canonicalReference: 'Psalms 1-3',
+      totalVerses: 26
+    })
+  })
+
+  it('supports the explicit chapter of a single-chapter book without losing a reparsable reference', () => {
+    expect(parseVerseSpanReference('Jude 1')).toMatchObject({
+      bookId: 'jud',
+      startChapter: 1,
+      startVerse: 1,
+      endChapter: 1,
+      endVerse: 25,
+      canonicalReference: 'Jude 1',
+      totalVerses: 25
+    })
+    expect(normalizeVerseReference('Jude 1')).toBe('Jude 1')
+  })
+
   it('rejects malformed, non-contiguous, and out-of-bounds spans', () => {
     expect(parseVerseSpanReference('John 3:16,18')).toBeNull()
     expect(parseVerseSpanReference('John 3:36-4')).toBeNull()
     expect(parseVerseSpanReference('John 3:37')).toBeNull()
     expect(parseVerseSpanReference('John 4:2-3:36')).toBeNull()
+    expect(parseVerseSpanReference('Psalm 0')).toBeNull()
+    expect(parseVerseSpanReference('Psalm 151')).toBeNull()
+    expect(parseVerseSpanReference('Psalm 3-1')).toBeNull()
+    expect(parseVerseSpanReference('Psalm 1-1')).toBeNull()
   })
 })
 
@@ -146,6 +187,7 @@ describe('verse span continuity helpers', () => {
     expect(areVerseSpansContiguous('John 3:16', 'John 3:17')).toBe(true)
     expect(areVerseSpansContiguous('John 3:16-17', 'John 3:18')).toBe(true)
     expect(areVerseSpansContiguous('John 3:36', 'John 4:1')).toBe(true)
+    expect(areVerseSpansContiguous('Psalm 1', 'Psalm 2')).toBe(true)
   })
 
   it('rejects gaps and different books', () => {
@@ -181,6 +223,20 @@ describe('findReferenceMatches', () => {
   it('detects overlap in the wider-reference direction too', () => {
     expect(findReferenceMatches('John 3:16-17', [{ id: 'single', reference: 'Jn 3:16', bibleVersion: 'ESV' }])).toEqual([
       { id: 'single', reference: 'Jn 3:16', bibleVersion: 'ESV', matchType: 'overlap' }
+    ])
+  })
+
+  it('treats chapter shorthand and an explicit full-chapter span as the same coverage', () => {
+    expect(findReferenceMatches('Psalm 1', [{
+      id: 'explicit', reference: 'Psalm 1:1-6', bibleVersion: 'BSB'
+    }])).toEqual([
+      { id: 'explicit', reference: 'Psalm 1:1-6', bibleVersion: 'BSB', matchType: 'exact' }
+    ])
+
+    expect(findReferenceMatches('Psalm 1:1-6', [{
+      id: 'chapter', reference: 'Psalm 1', bibleVersion: 'BSB'
+    }])).toEqual([
+      { id: 'chapter', reference: 'Psalm 1', bibleVersion: 'BSB', matchType: 'exact' }
     ])
   })
 

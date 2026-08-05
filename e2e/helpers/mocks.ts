@@ -12,7 +12,23 @@ export const MOCK_VERSE_CONTENT = 'For God so loved the world that he gave his o
  * Setup Bible API mock for importVerseContent.
  * Intercepts fetch.bible requests and returns mock book/verse data.
  */
-export async function mockBibleApi(page: Page, verseContent = MOCK_VERSE_CONTENT) {
+export async function mockBibleApi(
+  page: Page,
+  verseContent = MOCK_VERSE_CONTENT,
+  options: {
+    bookId?: string
+    bookName?: string
+    chapter?: number
+    startVerse?: number
+    verseContents?: string[]
+  } = {},
+) {
+  const bookId = options.bookId || 'jhn'
+  const bookName = options.bookName || 'John'
+  const chapter = options.chapter || 3
+  const startVerse = options.startVerse || 16
+  const verseContents = options.verseContents || [verseContent]
+
   await page.route(/.*fetch\.bible.*/, async (route) => {
     const url = route.request().url()
     // Return mock manifest or book data based on URL
@@ -30,8 +46,8 @@ export async function mockBibleApi(page: Page, verseContent = MOCK_VERSE_CONTENT
                 english_abbrev: 'BSB',
               },
               year: 2020,
-              books_ot: [],
-              books_nt: ['jhn'],
+              books_ot: bookId === 'psa' ? [bookId] : [],
+              books_nt: bookId === 'psa' ? [] : [bookId],
               copyright: {
                 attribution: 'Mock Bible',
                 attribution_url: 'https://example.com/mock-bible',
@@ -55,9 +71,9 @@ export async function mockBibleApi(page: Page, verseContent = MOCK_VERSE_CONTENT
             en: 'eng',
           },
           languages_most_spoken: ['eng'],
-          books_ordered: ['jhn'],
+          books_ordered: [bookId],
           book_names_english: {
-            jhn: 'John',
+            [bookId]: bookName,
           },
           licenses: {
             'mock-open': {
@@ -76,41 +92,25 @@ export async function mockBibleApi(page: Page, verseContent = MOCK_VERSE_CONTENT
       return
     }
     if (url.includes('.json') && !url.includes('manifest')) {
+      const contents = Array.from({ length: chapter + 1 }, () => [])
+      const chapterContents = Array.from({ length: startVerse + verseContents.length }, () => [])
+      verseContents.forEach((content, index) => {
+        chapterContents[startVerse + index] = [content]
+      })
+      contents[chapter] = chapterContents
+
       // Book format - return minimal structure with verse content
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          book: 'jhn',
+          book: bookId,
           name: {
-            normal: 'John',
-            long: 'The Gospel According to John',
-            abbrev: 'John',
+            normal: bookName,
+            long: bookName,
+            abbrev: bookName,
           },
-          contents: [
-            [],
-            [],
-            [],
-            [
-              [],
-              [],
-              [],
-              [],
-              [],
-              [],
-              [],
-              [],
-              [],
-              [],
-              [],
-              [],
-              [],
-              [],
-              [],
-              [],
-              [verseContent],
-            ],
-          ],
+          contents,
         }),
       })
       return

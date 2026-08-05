@@ -2880,7 +2880,7 @@ export default {
     const newVerseReferenceTouched = ref(false)
     const useNewVerseBibleVersionAsDefault = ref(false)
     const editedVerseReferenceTouched = ref(false)
-    const invalidReferenceMessage = 'Use a reference like "John 3:16", "John 3:16-17", or "John 3:36-4:2".'
+    const invalidReferenceMessage = 'Enter a verse or chapter reference. Ranges can span verses or chapters.'
 
     // YouVersion numeric IDs for common translations
     const youVersionIds = {
@@ -2961,6 +2961,9 @@ export default {
       if (!parsed) return null
       if (parsed.startChapter !== parsed.endChapter) return null
       const usfmBook = parsed.bookId.toUpperCase()
+      if (parsed.isWholeChapter) {
+        return `https://www.bible.com/bible/${versionId}/${usfmBook}.${parsed.startChapter}.${version}`
+      }
       const verseRef = parsed.endVerse > parsed.startVerse ? `${parsed.startVerse}-${parsed.endVerse}` : `${parsed.startVerse}`
       return `https://www.bible.com/bible/${versionId}/${usfmBook}.${parsed.startChapter}.${verseRef}.${version}`
     }
@@ -5541,7 +5544,7 @@ export default {
 
       const parsed = parseVerseSpanReference(reference)
       if (!parsed) {
-        importError.value = "Could not parse verse reference. Please use format like 'John 3:16', 'John 3:16-17', or 'John 3:36-4:2'."
+        importError.value = "Could not parse passage reference. Please use a format like 'John 3:16', 'John 3:16-17', 'Psalm 1', or 'Psalm 1-3'."
         return
       }
 

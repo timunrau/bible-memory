@@ -220,7 +220,8 @@ test('add verse reference input: normalizes valid references and validates inval
   await reference.fill('phil 1:6')
   await content.click()
   await expect(reference).toHaveAttribute('aria-invalid', 'true')
-  await expect(page.getByText('Use a reference like "John 3:16", "John 3:16-17", or "John 3:36-4:2".')).toBeVisible()
+  await expect(page.getByText('Enter a verse or chapter reference. Ranges can span verses or chapters.')).toBeVisible()
+  await expect(page.getByText('Examples: John 3:16 · John 3:16–17 · John 3:36–4:2 · Psalm 1 · Psalm 1–3')).toBeVisible()
 
   await reference.fill('John')
   await expect(reference).not.toHaveAttribute('aria-invalid', 'true')
@@ -235,7 +236,8 @@ test('add verse reference input: normalizes valid references and validates inval
   await page.getByRole('button', { name: 'Add Verse' }).click()
 
   await expect(page.getByTestId('modal-add-verse')).toBeVisible()
-  await expect(page.getByText('Use a reference like "John 3:16", "John 3:16-17", or "John 3:36-4:2".')).toBeVisible()
+  await expect(page.getByText('Enter a verse or chapter reference. Ranges can span verses or chapters.')).toBeVisible()
+  await expect(page.getByText('Examples: John 3:16 · John 3:16–17 · John 3:36–4:2 · Psalm 1 · Psalm 1–3')).toBeVisible()
 })
 
 test('add verse import: appears only for a valid reference and clears stale offline feedback on edit', async ({ page }) => {
@@ -299,6 +301,47 @@ test('add verse with Bible import: BSB shorthand imports content through the fet
     bibleVersion: 'BSB',
     content: MOCK_VERSE_CONTENT,
   })
+})
+
+test('add passage with Bible import: whole-chapter shorthand imports through the final verse', async ({ page }) => {
+  const chapterVerses = Array.from({ length: 6 }, (_, index) => `Psalm 1 verse ${index + 1}.`)
+  await mockBibleApi(page, MOCK_VERSE_CONTENT, {
+    bookId: 'psa',
+    bookName: 'Psalms',
+    chapter: 1,
+    startVerse: 1,
+    verseContents: chapterVerses,
+  })
+  await openAddVerseModal(page)
+
+  await page.getByLabel('Reference').fill('Psalm 1')
+  await page.getByLabel('Bible version').fill('BSB')
+  await page.getByRole('button', { name: 'Import verse text' }).click()
+
+  await expect(page.getByLabel('Verse text', { exact: true })).toHaveValue(chapterVerses.join(' '))
+  await page.getByRole('button', { name: 'Add Verse' }).click()
+  await expect(page.getByText('Psalms 1')).toBeVisible()
+
+  const storedVerses = await getStoredVerses(page) as Array<{ reference: string, content: string }>
+  expect(storedVerses).toHaveLength(1)
+  expect(storedVerses[0]).toMatchObject({
+    reference: 'Psalms 1',
+    content: chapterVerses.join(' '),
+  })
+})
+
+test('whole-chapter references link to the full chapter for unavailable translations', async ({ page }) => {
+  await mockBibleApi(page)
+  await openAddVerseModal(page)
+
+  await page.getByLabel('Reference').fill('Psalm 1')
+  await page.getByLabel('Bible version').fill('NIV')
+  await page.getByRole('button', { name: 'Import verse text' }).click()
+
+  await expect(page.getByRole('link', { name: 'YouVersion' })).toHaveAttribute(
+    'href',
+    'https://www.bible.com/bible/111/PSA.1.NIV',
+  )
 })
 
 test('verse import: unavailable translations use the same guidance in Add and Edit', async ({ page }) => {
