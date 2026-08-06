@@ -1043,46 +1043,8 @@
         <div
           v-for="verse in sortedVerses"
           :key="verse.id"
-          :class="[
-            'relative',
-            shouldShowVerseOnboardingCallout && verse.id === guidedOnboardingVerseId
-              ? 'pb-24 sm:pb-20'
-              : ''
-          ]"
+          class="relative"
         >
-          <div
-            v-if="shouldShowVerseOnboardingCallout && verse.id === guidedOnboardingVerseId"
-            class="pointer-events-none absolute inset-x-0 bottom-0 z-50 flex px-4"
-          >
-            <div class="onboarding-callout pointer-events-auto relative w-[calc(100%-1rem)] max-w-sm rounded-lg px-4 py-3">
-              <div class="absolute left-8 bottom-full h-4 w-4 translate-y-2 rotate-45 border-l border-t border-border-default bg-[var(--color-bg-pressed-paper)]" />
-              <div class="flex items-start gap-3">
-                <div class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-warm text-accent-warm-contrast">
-                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 18h6" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 22h4" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3a6 6 0 00-3.6 10.8c.79.59 1.35 1.44 1.56 2.4h4.08c.21-.96.77-1.81 1.56-2.4A6 6 0 0012 3z" />
-                  </svg>
-                </div>
-                <div class="flex-1">
-                  <p class="text-sm font-semibold text-text-primary">
-                    {{ guidedOnboardingStep === 'practice' ? 'Tap your verse to keep memorizing it.' : 'Tap your verse to start memorizing it.' }}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  class="rounded-full p-1 text-text-secondary transition-colors duration-200 hover:bg-surface-hover hover:text-text-primary"
-                  aria-label="Dismiss onboarding"
-                  @click.stop="skipGuidedOnboarding"
-                >
-                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-
           <div
             :ref="(el) => setVerseCardRef(verse.id, el)"
             @pointerdown="startVerseLongPress(verse, $event)"
@@ -1174,6 +1136,21 @@
               </Transition>
             </div>
           </div>
+          </div>
+
+          <div
+            v-if="shouldShowVerseOnboardingCallout && verse.id === guidedOnboardingVerseId"
+            class="relative z-50 mt-2 flex px-4"
+          >
+            <OnboardingCallout
+              class="w-[calc(100%-1rem)] max-w-sm"
+              data-testid="verse-onboarding-callout"
+              :title="guidedOnboardingStep === 'practice' ? 'Tap your verse to keep memorizing it.' : 'Tap your verse to start memorizing it.'"
+              icon="lightbulb"
+              pointer="top-start"
+              dismiss-label="Dismiss onboarding"
+              @dismiss="skipGuidedOnboarding"
+            />
           </div>
         </div>
 
@@ -2415,6 +2392,7 @@ import AppDialog from './components/AppDialog.vue'
 import CollectionPicker from './components/CollectionPicker.vue'
 import VerseFormFields from './components/VerseFormFields.vue'
 import CollectionsAlmanac from './components/CollectionsAlmanac.vue'
+import OnboardingCallout from './components/OnboardingCallout.vue'
 import SyncSettingsModal from './components/SyncSettingsModal.vue'
 import BackupNudgeCard from './components/BackupNudgeCard.vue'
 import AppShell from './components/brand/AppShell.vue'
@@ -2431,7 +2409,7 @@ ChartJS.register(
 
 export default {
   name: 'App',
-  components: { IOSInstallModal, VersePracticeView, CompletionTray, ModalSheet, AppDialog, CollectionPicker, VerseFormFields, CollectionsAlmanac, SyncSettingsModal, BackupNudgeCard, Line, Bar, AppShell, BrandMark, PrimaryButton, SecondaryButton, HeadwordReference, POSBadge },
+  components: { IOSInstallModal, VersePracticeView, CompletionTray, ModalSheet, AppDialog, CollectionPicker, VerseFormFields, CollectionsAlmanac, OnboardingCallout, SyncSettingsModal, BackupNudgeCard, Line, Bar, AppShell, BrandMark, PrimaryButton, SecondaryButton, HeadwordReference, POSBadge },
   setup() {
     const verses = ref([])
     const collections = ref([])
@@ -9893,11 +9871,26 @@ export default {
 .practice-session-header__inner {
   display: flex;
   width: 100%;
-  max-width: 56rem;
+  max-width: var(--practice-content-max-width);
   min-height: 4rem;
   align-items: center;
   margin: 0 auto;
   padding: 0.55rem 1rem;
+}
+
+@media (min-width: 640px) {
+  .practice-session-header__inner {
+    width: min(calc(100% - 2rem), var(--practice-content-max-width));
+    padding-inline: 0;
+  }
+
+  .practice-session-header__inner > .practice-header-button:first-child {
+    margin-left: -0.5rem;
+  }
+
+  .practice-session-header__inner > :last-child {
+    margin-right: -0.5rem;
+  }
 }
 
 .practice-session-title {

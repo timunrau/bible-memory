@@ -138,32 +138,17 @@
         </article>
       </div>
 
-    <div v-if="panel.isCurrent && showPracticeModesHint && !showTray && practiceModeHint" class="px-4 pb-1">
-      <div class="practice-hint">
-        <div class="flex items-start gap-3">
-          <div class="practice-hint__icon">
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 18h6" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 22h4" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3a6 6 0 00-3.6 10.8c.79.59 1.35 1.44 1.56 2.4h4.08c.21-.96.77-1.81 1.56-2.4A6 6 0 0012 3z" />
-            </svg>
-          </div>
-          <div class="flex-1">
-            <p class="practice-hint__title">{{ practiceModeHint.title }}</p>
-            <p v-if="practiceModeHint.body" class="practice-hint__body">{{ practiceModeHint.body }}</p>
-          </div>
-          <button
-            type="button"
-            class="practice-hint__close"
-            aria-label="Dismiss practice modes help"
-            @click="$emit('dismiss-practice-modes-hint')"
-          >
-            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      </div>
+    <div v-if="panel.isCurrent && showPracticeModesHint && !showTray && practiceModeHint" class="practice-guidance-wrap px-4 pb-1">
+      <OnboardingCallout
+        class="practice-guidance"
+        data-testid="practice-mode-callout"
+        :title="practiceModeHint.title"
+        :body="practiceModeHint.body || ''"
+        icon="lightbulb"
+        pointer="none"
+        dismiss-label="Dismiss practice modes help"
+        @dismiss="$emit('dismiss-practice-modes-hint')"
+      />
     </div>
 
       <Transition name="passage-feedback">
@@ -254,9 +239,11 @@
 
 <script>
 import { computed, ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import OnboardingCallout from './OnboardingCallout.vue'
 
 export default {
   name: 'VersePracticeView',
+  components: { OnboardingCallout },
   props: {
     verse: { type: Object, default: null },
     memorizationMode: { type: String, default: null },
@@ -811,7 +798,7 @@ export default {
 .practice-card {
   display: flex;
   width: 100%;
-  max-width: 42rem;
+  max-width: var(--practice-content-max-width);
   max-height: 100%;
   min-height: min(clamp(15rem, 44vh, 24rem), 100%);
   flex-direction: column;
@@ -842,13 +829,22 @@ export default {
   padding: 0.3rem 1rem 0.95rem;
 }
 
+.practice-guidance-wrap {
+  width: 100%;
+}
+
+.practice-guidance {
+  max-width: var(--practice-content-max-width);
+  margin-inline: auto;
+}
+
 .passage-segment-feedback {
   display: flex;
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
   gap: 0.35rem 0.65rem;
-  width: min(100%, 42rem);
+  width: min(100%, var(--practice-content-max-width));
   max-height: 3rem;
   margin: 0 auto 0.45rem;
   overflow: hidden;
@@ -895,7 +891,7 @@ export default {
   align-items: center;
   justify-content: space-around;
   width: 100%;
-  max-width: 42rem;
+  max-width: var(--practice-content-max-width);
   margin: 0 auto;
   padding: 0;
 }

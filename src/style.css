@@ -33,6 +33,7 @@
     --radius-xl: 14px;
     --radius-pill: 999px;
     --radius-control: 10px;
+    --practice-content-max-width: 42rem;
 
     /* Font families */
     --font-serif: "Literata", "Noto Serif", Georgia, Cambria, "Times New Roman", Times, serif;
@@ -209,8 +210,7 @@
 @layer components {
   .pressed-paper,
   .practice-hint,
-  .hero-onboarding,
-  .onboarding-callout {
+  .hero-onboarding {
     position: relative;
     isolation: isolate;
     overflow: hidden;
@@ -221,8 +221,7 @@
 
   .pressed-paper::before,
   .practice-hint::before,
-  .hero-onboarding::before,
-  .onboarding-callout::before {
+  .hero-onboarding::before {
     content: "";
     position: absolute;
     inset: 0;
@@ -240,8 +239,7 @@
 
   .dark .pressed-paper::before,
   .dark .practice-hint::before,
-  .dark .hero-onboarding::before,
-  .dark .onboarding-callout::before {
+  .dark .hero-onboarding::before {
     opacity: 0.16;
     background-image:
       radial-gradient(circle at 18% 24%, rgba(210, 182, 111, 0.16) 0 0.7px, transparent 1.2px),
@@ -254,8 +252,7 @@
 
   .dark .pressed-paper,
   .dark .practice-hint,
-  .dark .hero-onboarding,
-  .dark .onboarding-callout {
+  .dark .hero-onboarding {
     border-color: rgba(243, 239, 230, 0.11);
   }
 
@@ -961,7 +958,7 @@
     position: relative;
     z-index: 10;
     flex-shrink: 0;
-    width: min(calc(100% - 2rem), 42rem);
+    width: min(calc(100% - 2rem), var(--practice-content-max-width));
     margin: 0 auto 0.7rem;
     padding: 0.75rem clamp(0.85rem, 4vw, 1.35rem) calc(1.25rem + env(safe-area-inset-bottom));
     color: var(--color-text-primary);

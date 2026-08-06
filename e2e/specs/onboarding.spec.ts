@@ -32,6 +32,42 @@ async function exitMemorization(page: Page) {
   await expect(page.locator('#letter-input-memorize')).not.toBeAttached()
 }
 
+async function swipePracticeVerse(page: Page, direction: 'next' | 'previous') {
+  const frame = page.locator('.practice-swipe-frame').first()
+  await frame.evaluate((element, swipeDirection) => {
+    const rect = element.getBoundingClientRect()
+    const y = rect.top + rect.height / 2
+    const startX = swipeDirection === 'next'
+      ? rect.left + rect.width * 0.82
+      : rect.left + rect.width * 0.18
+    const endX = swipeDirection === 'next'
+      ? rect.left + rect.width * 0.18
+      : rect.left + rect.width * 0.82
+
+    const touch = (clientX: number) => ({
+      identifier: 1,
+      target: element,
+      clientX,
+      clientY: y,
+      screenX: clientX,
+      screenY: y,
+      pageX: clientX,
+      pageY: y,
+    })
+
+    const dispatchTouch = (type: string, touches: Array<ReturnType<typeof touch>>, changedTouches = touches) => {
+      const event = new Event(type, { bubbles: true, cancelable: true })
+      Object.defineProperty(event, 'touches', { value: touches })
+      Object.defineProperty(event, 'changedTouches', { value: changedTouches })
+      element.dispatchEvent(event)
+    }
+
+    dispatchTouch('touchstart', [touch(startX)])
+    dispatchTouch('touchmove', [touch(endX)], [touch(endX)])
+    dispatchTouch('touchend', [], [touch(endX)])
+  }, direction)
+}
+
 test('fresh storage shows the first-run hero card', async ({ page }) => {
   await gotoApp(page, '?view=collections')
 
@@ -77,6 +113,105 @@ test('first learn-mode hint shows once and stays dismissed after reload', async 
 
   await expect(page.locator('#letter-input-memorize')).toBeAttached()
   await expect(page.getByText('Type the first letter of each word.')).toBeHidden()
+})
+
+test('desktop first practice aligns chrome, guidance, stages, and completion without narrowing the swipe frame', async ({ page }) => {
+  const { reference } = await addFirstVerseFromHero(page)
+
+  await page.getByText(reference).first().click()
+  await expect(page.getByTestId('practice-mode-callout')).toBeVisible()
+
+  const widths = await page.evaluate(() => {
+    const width = (selector: string) => document.querySelector(selector)?.getBoundingClientRect().width || 0
+    return {
+      frame: width('.practice-swipe-frame'),
+      header: width('.practice-session-header__inner'),
+      card: width('.practice-swipe-panel--active .practice-card'),
+      guidance: width('[data-testid="practice-mode-callout"]'),
+      stages: width('.practice-swipe-panel--active .practice-stage-rail'),
+    }
+  })
+
+  expect(widths.frame).toBeGreaterThan(widths.card)
+  for (const alignedWidth of [widths.header, widths.guidance, widths.stages]) {
+    expect(Math.abs(alignedWidth - widths.card)).toBeLessThanOrEqual(1)
+  }
+
+  await page.locator('#letter-input-memorize').focus()
+  await page.keyboard.type('ot', { delay: 50 })
+  await expect(page.getByRole('button', { name: /Continue to Memorize/i })).toBeVisible()
+
+  const completionWidth = await page.locator('.completion-tray').evaluate((element) => (
+    element.getBoundingClientRect().width
+  ))
+  expect(Math.abs(completionWidth - widths.card)).toBeLessThanOrEqual(1)
+})
+
+test('memorization swipes keep target content, status-driven mode, and input focus live', async ({ page }) => {
+  const now = new Date().toISOString()
+  const verses = [
+    {
+      id: 'memorization-swipe-learn',
+      reference: 'Psalm 1:1',
+      content: 'Alpha first',
+      bibleVersion: 'BSB',
+      createdAt: now,
+      lastModified: now,
+      memorizationStatus: 'unmemorized',
+      reviewCount: 0,
+      lastReviewed: null,
+      nextReviewDate: null,
+      easeFactor: 2.5,
+      interval: 0,
+      reviewHistory: [],
+      collectionIds: [],
+    },
+    {
+      id: 'memorization-swipe-memorize',
+      reference: 'Psalm 2:1',
+      content: 'Beta second',
+      bibleVersion: 'BSB',
+      createdAt: now,
+      lastModified: now,
+      memorizationStatus: 'learned',
+      reviewCount: 0,
+      lastReviewed: null,
+      nextReviewDate: null,
+      easeFactor: 2.5,
+      interval: 0,
+      reviewHistory: [],
+      collectionIds: [],
+    },
+  ]
+
+  await seedStorage(page, verses, [])
+  await seedUiState(page, {
+    guidedOnboardingStep: 'practice',
+    guidedOnboardingVerseId: verses[0].id,
+    onboardingDismissed: false,
+  })
+  await page.reload()
+  await gotoApp(page, '?view=collections')
+
+  await page.getByText('Psalm 1:1').first().click()
+  await expect(page.locator('.practice-swipe-panel--active .practice-card')).toContainText('Alpha')
+  await page.locator('.practice-swipe-panel--active .mode-chip').filter({ hasText: 'Master' }).click()
+  await expect(page.locator('.practice-swipe-panel--active .mode-chip[aria-current="step"]')).toContainText('Master')
+
+  await swipePracticeVerse(page, 'next')
+
+  await expect(page.locator('h1')).toContainText('Psalm 2:1')
+  await expect(page.locator('.practice-swipe-panel--active .practice-card')).toContainText('Beta')
+  await expect(page.locator('.practice-swipe-panel--active .practice-card')).not.toContainText('Alpha')
+  await expect(page.locator('.practice-swipe-panel--active .mode-chip[aria-current="step"]')).toContainText('Memorize')
+  await expect(page.locator('#letter-input-memorize')).toBeFocused()
+
+  await swipePracticeVerse(page, 'previous')
+
+  await expect(page.locator('h1')).toContainText('Psalm 1:1')
+  await expect(page.locator('.practice-swipe-panel--active .practice-card')).toContainText('Alpha')
+  await expect(page.locator('.practice-swipe-panel--active .mode-chip[aria-current="step"]')).toContainText('Learn')
+  await expect(page.locator('#letter-input-memorize')).toBeFocused()
 })
 
 test('first-time memorize and master hints appear when advancing stages', async ({ page }) => {

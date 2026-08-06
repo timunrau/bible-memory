@@ -29,23 +29,17 @@
         </button>
         <div
           v-if="showStartReviewCallout"
-          class="pointer-events-auto relative z-10 mt-4 w-72 max-w-[calc(100vw-2rem)]"
+          class="pointer-events-auto relative z-10 mt-2 w-72 max-w-[calc(100vw-2rem)]"
         >
-          <div class="onboarding-callout relative rounded-lg px-4 py-3">
-            <div class="absolute left-1/2 bottom-full h-4 w-4 -translate-x-1/2 translate-y-2 rotate-45 border-l border-t border-border-default bg-[var(--color-bg-pressed-paper)]" />
-            <button
-              type="button"
-              class="absolute right-3 top-3 rounded-full p-1 text-text-secondary transition-colors duration-200 hover:bg-surface-hover hover:text-text-primary"
-              aria-label="Dismiss review callout"
-              @click="$emit('dismiss-start-review-callout')"
-            >
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            <p class="text-sm font-semibold text-text-primary">{{ startReviewCalloutTitle }}</p>
-            <p class="mt-1 pr-8 text-sm leading-relaxed text-text-secondary">{{ startReviewCalloutBody }}</p>
-          </div>
+          <OnboardingCallout
+            data-testid="review-onboarding-callout"
+            :title="startReviewCalloutTitle"
+            :body="startReviewCalloutBody"
+            icon="none"
+            pointer="top-center"
+            dismiss-label="Dismiss review callout"
+            @dismiss="$emit('dismiss-start-review-callout')"
+          />
         </div>
       </div>
     </div>
@@ -54,6 +48,8 @@
 </template>
 
 <script setup>
+import OnboardingCallout from './OnboardingCallout.vue'
+
 defineProps({
   currentStreak: { type: Number, required: true },
   dueVersesCount: { type: Number, required: true },
