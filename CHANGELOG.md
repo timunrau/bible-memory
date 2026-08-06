@@ -1,3 +1,10 @@
+## [1.44.1](https://github.com/timunrau/rum1n8/compare/v1.44.0...v1.44.1) (2026-08-06)
+
+
+### Bug Fixes
+
+* stabilize verse import action ([17f8f02](https://github.com/timunrau/rum1n8/commit/17f8f029994623d9769fbaf01db401acc8367654))
+
 # [1.44.0](https://github.com/timunrau/rum1n8/compare/v1.43.0...v1.44.0) (2026-08-05)
 
 
