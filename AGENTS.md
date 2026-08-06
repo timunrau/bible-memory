@@ -15,7 +15,7 @@
 - End-to-end tests: `npm run test:e2e`
 - Playwright starts the app server automatically from `playwright.config.ts`; do not manually start a separate dev server unless intentionally reusing one.
 - If Playwright reports that Chromium is missing, run `npx playwright install chromium`.
-- In sandboxed environments, e2e may need permission to open a local listening port because Playwright launches the Vite server.
+- In Codex's sandbox, always run `npm run test:e2e` with escalated permissions from the outset. The sandboxed run cannot launch Chrome reliably (`SIGABRT`/`EPERM`) and only wastes a full test attempt; escalation also permits Playwright's Vite server to open its local listening port.
 
 ## Versioning
 

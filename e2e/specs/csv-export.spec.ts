@@ -46,7 +46,7 @@ test('collection header exports an importer-compatible CSV for the collection su
   ].join('\r\n'))
 })
 
-test('virtual collections do not show collection actions', async ({ page }) => {
+test('virtual collections show shared actions but not edit or export actions', async ({ page }) => {
   const verses = [{
     id: 'one',
     reference: 'John 3:16',
@@ -57,5 +57,9 @@ test('virtual collections do not show collection actions', async ({ page }) => {
   await seedStorage(page, verses, [])
   await gotoApp(page, '?view=collection&collection=master-list')
 
-  await expect(page.getByTestId('collection-actions-trigger')).toHaveCount(0)
+  await page.getByTestId('collection-actions-trigger').click()
+  await expect(page.getByRole('menuitem', { name: 'Select verses' })).toBeVisible()
+  await expect(page.getByRole('menuitem', { name: 'Expand all' })).toBeVisible()
+  await expect(page.getByRole('menuitem', { name: 'Edit collection' })).toHaveCount(0)
+  await expect(page.getByTestId('collection-export-csv')).toHaveCount(0)
 })

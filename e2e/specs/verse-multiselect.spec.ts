@@ -52,6 +52,7 @@ async function seedReadyApp(page: Page, verses: unknown[], collections = baseCol
 }
 
 async function openSelectionMode(page: Page) {
+  await page.getByTestId('collection-actions-trigger').click()
   await page.getByTestId('verse-select-mode').click()
   await expect(page.getByTestId('verse-selection-bar')).toBeVisible()
 }
@@ -70,7 +71,7 @@ test.beforeEach(async ({ page }) => {
   await page.reload()
 })
 
-test('select mode opens in virtual verse lists', async ({ page }) => {
+test('select mode is hidden at the root and opens in virtual verse lists', async ({ page }) => {
   await seedReadyApp(page, [
     verse({ id: 'uncategorized', reference: 'John 3:16', collectionIds: [] }),
     verse({
@@ -85,6 +86,9 @@ test('select mode opens in virtual verse lists', async ({ page }) => {
       collectionIds: ['alpha'],
     }),
   ])
+
+  await gotoApp(page, '?view=collections')
+  await expect(page.getByTestId('verse-select-mode')).toHaveCount(0)
 
   for (const collectionId of ['master-list', 'no-collection', 'to-learn']) {
     await gotoApp(page, `?view=collection&collection=${collectionId}`)

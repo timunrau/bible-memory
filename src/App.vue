@@ -630,20 +630,6 @@
 
               <!-- Right side actions -->
               <div class="relative flex items-center gap-1 flex-shrink-0">
-                <button
-                  v-if="canUseVerseSelection && !isVerseSelectionMode"
-                  type="button"
-                  data-testid="verse-select-mode"
-                  @click.stop="enterVerseSelectionMode()"
-                  class="p-2 text-text-secondary active:bg-surface-active rounded-full transition-colors"
-                  title="Select verses"
-                  aria-label="Select verses"
-                >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <rect x="4.25" y="4.25" width="15.5" height="15.5" rx="3" stroke-width="1.8" stroke-dasharray="2.4 2.4" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.9" d="M8.2 12.35l2.45 2.45 5.15-5.6" />
-                  </svg>
-                </button>
                 <!-- Install app button (top-level verses screen only, when actionable) -->
                 <button
                   v-if="showInstallHeaderAction && !isVerseSelectionMode"
@@ -653,28 +639,9 @@
                 >
                   Install app
                 </button>
-                <!-- Expand/collapse all verses (collection view only) -->
+                <!-- Collection actions -->
                 <button
-                  v-if="currentCollectionId && sortedVerses.length > 0 && !isVerseSelectionMode"
-                  @click="toggleAllCollectionVersesExpanded"
-                  class="p-2 text-text-secondary active:bg-surface-active rounded-full transition-colors"
-                  :title="allCollectionVersesExpanded ? 'Collapse all' : 'Expand all'"
-                >
-                  <!-- Collapse: chevrons pointing inward (toward center) -->
-                  <svg v-if="allCollectionVersesExpanded" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 2l7 7 7-7" />
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 22l-7-7-7 7" />
-                  </svg>
-                  <!-- Expand: chevrons pointing outward (away from center) -->
-                  <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 9l7-7 7 7" />
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 15l-7 7-7-7" />
-                  </svg>
-                </button>
-
-                <!-- Collection actions (user-created collections only) -->
-                <button
-                  v-if="isRealCurrentCollection && !isVerseSelectionMode"
+                  v-if="currentCollectionId && !isVerseSelectionMode"
                   type="button"
                   data-testid="collection-actions-trigger"
                   class="p-2 text-text-secondary active:bg-surface-active rounded-full transition-colors"
@@ -699,6 +666,39 @@
                   role="menu"
                 >
                   <button
+                    v-if="canUseVerseSelection"
+                    type="button"
+                    data-testid="verse-select-mode"
+                    class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-text-primary hover:bg-surface-hover active:bg-surface-active"
+                    role="menuitem"
+                    @click.stop="enterVerseSelectionMode(); closeCollectionActions()"
+                  >
+                    <svg class="h-4 w-4 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <rect x="4.25" y="4.25" width="15.5" height="15.5" rx="3" stroke-width="1.8" stroke-dasharray="2.4 2.4" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.9" d="M8.2 12.35l2.45 2.45 5.15-5.6" />
+                    </svg>
+                    <span>Select verses</span>
+                  </button>
+                  <button
+                    v-if="sortedVerses.length > 0"
+                    type="button"
+                    data-testid="collection-expand-toggle"
+                    class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-text-primary hover:bg-surface-hover active:bg-surface-active"
+                    role="menuitem"
+                    @click.stop="toggleAllCollectionVersesExpanded(); closeCollectionActions()"
+                  >
+                    <svg v-if="allCollectionVersesExpanded" class="h-4 w-4 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M5 2l7 7 7-7" />
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M19 22l-7-7-7 7" />
+                    </svg>
+                    <svg v-else class="h-4 w-4 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M5 9l7-7 7 7" />
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M19 15l-7 7-7-7" />
+                    </svg>
+                    <span>{{ allCollectionVersesExpanded ? 'Collapse all' : 'Expand all' }}</span>
+                  </button>
+                  <button
+                    v-if="isRealCurrentCollection"
                     type="button"
                     class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-text-primary hover:bg-surface-hover active:bg-surface-active"
                     role="menuitem"
@@ -710,6 +710,7 @@
                     <span>Edit collection</span>
                   </button>
                   <button
+                    v-if="isRealCurrentCollection"
                     type="button"
                     data-testid="collection-export-csv"
                     class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-text-primary hover:bg-surface-hover active:bg-surface-active"
