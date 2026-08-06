@@ -240,24 +240,37 @@ test('add verse reference input: normalizes valid references and validates inval
   await expect(page.getByText('Examples: John 3:16 · John 3:16–17 · John 3:36–4:2 · Psalm 1 · Psalm 1–3')).toBeVisible()
 })
 
-test('add verse import: appears only for a valid reference and clears stale offline feedback on edit', async ({ page }) => {
+test('add verse import: stays visible, validates on click, and clears stale offline feedback on edit', async ({ page }) => {
   await openAddVerseModal(page)
 
   const reference = page.getByLabel('Reference')
   const bibleVersion = page.getByLabel('Bible version')
   const importButton = page.getByRole('button', { name: 'Import verse text' })
 
-  await bibleVersion.fill('BSB')
-  await reference.fill('not a reference')
-  await expect(importButton).toHaveCount(0)
-
-  await reference.fill('John 3:16')
-  await expect(importButton).toBeVisible()
-
   const bibleRequests: string[] = []
   page.on('request', request => {
     if (request.url().includes('fetch.bible')) bibleRequests.push(request.url())
   })
+
+  await expect(importButton).toBeVisible()
+
+  await reference.fill('not a reference')
+  await expect(importButton).toBeVisible()
+  await importButton.click()
+  await expect(reference).toBeFocused()
+  await expect(reference).toHaveAttribute('aria-invalid', 'true')
+  await expect(page.getByText('Enter a verse or chapter reference. Ranges can span verses or chapters.')).toBeVisible()
+  expect(bibleRequests).toEqual([])
+
+  await reference.fill('John 3:16')
+  await expect(importButton).toBeVisible()
+  await importButton.click()
+  await expect(bibleVersion).toBeFocused()
+  await expect(page.getByText('Please enter a Bible version first.')).toBeVisible()
+  expect(bibleRequests).toEqual([])
+
+  await bibleVersion.fill('BSB')
+  await expect(page.getByText('Please enter a Bible version first.')).toHaveCount(0)
 
   await page.context().setOffline(true)
   await page.evaluate(() => window.dispatchEvent(new Event('offline')))

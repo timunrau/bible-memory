@@ -2944,6 +2944,15 @@ export default {
       importingVerse.value = false
     }
 
+    const focusImportField = (verseDraft, field) => {
+      const editingPrefix = verseDraft === editingVerse.value ? 'edit-' : ''
+      const fieldId = field === 'reference'
+        ? `${editingPrefix}reference`
+        : `${editingPrefix}bible-version`
+
+      nextTick(() => document.getElementById(fieldId)?.focus())
+    }
+
     const getBibleGatewayUrl = (verseDraft = newVerse.value) => {
       const ref = getVerseDraftField(verseDraft, 'reference')
       const version = getVerseDraftField(verseDraft, 'bibleVersion').toUpperCase()
@@ -5529,22 +5538,23 @@ export default {
       markReferenceTouched(verseDraft)
       normalizeVerseDraftReference(verseDraft)
 
-      if (!isOnline.value) {
-        importError.value = 'Verse text import needs an internet connection. You can still paste content manually.'
-        return
-      }
-
       const reference = getVerseDraftField(verseDraft, 'reference')
       const version = getVerseDraftField(verseDraft, 'bibleVersion').toLowerCase()
 
-      if (!reference || !version) {
-        importError.value = 'Please enter both a verse reference and Bible version first.'
+      const parsed = parseVerseSpanReference(reference)
+      if (!parsed) {
+        focusImportField(verseDraft, 'reference')
         return
       }
 
-      const parsed = parseVerseSpanReference(reference)
-      if (!parsed) {
-        importError.value = "Could not parse passage reference. Please use a format like 'John 3:16', 'John 3:16-17', 'Psalm 1', or 'Psalm 1-3'."
+      if (!version) {
+        importError.value = 'Please enter a Bible version first.'
+        focusImportField(verseDraft, 'bibleVersion')
+        return
+      }
+
+      if (!isOnline.value) {
+        importError.value = 'Verse text import needs an internet connection. You can still paste content manually.'
         return
       }
 

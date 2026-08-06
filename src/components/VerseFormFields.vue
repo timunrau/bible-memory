@@ -57,72 +57,70 @@
       </label>
     </div>
 
-    <Transition name="verse-import-action">
-      <div v-if="importVisible" class="pt-2">
-        <button
-          type="button"
-          aria-label="Import verse text"
-          :disabled="importing"
-          class="btn-secondary btn--sm"
-          @click="$emit('import')"
-        >
-          <svg v-if="importing" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4M5 19h14" />
-          </svg>
-          <span>{{ importing ? 'Importing...' : 'Import verse text' }}</span>
-        </button>
+    <div v-if="showImport" class="pt-1">
+      <button
+        type="button"
+        aria-label="Import verse text"
+        :disabled="importing"
+        class="btn-secondary btn--sm verse-import-button"
+        @click="$emit('import')"
+      >
+        <svg v-if="importing" class="animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <svg v-else fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v1.125A2.625 2.625 0 0 0 5.625 20.25h12.75A2.625 2.625 0 0 0 21 17.625V16.5M7.5 10.5 12 15m0 0 4.5-4.5M12 15V3.75" />
+        </svg>
+        <span>{{ importing ? 'Importing...' : 'Import verse text' }}</span>
+      </button>
 
-        <div
-          v-if="importError"
-          ref="importErrorRef"
-          class="mt-2 p-3 bg-status-amber-bg border border-status-amber-border rounded-lg space-y-2"
-        >
-          <template v-if="importErrorShowLink">
-            <p class="text-sm text-status-amber-text">
-              This translation is copyrighted. Copy the text from one of the links below and paste it into <strong>Verse text</strong>.
-            </p>
-            <div class="flex flex-wrap gap-2">
-              <a
-                :href="bibleGatewayUrl"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="inline-flex items-center px-3 py-1 rounded-full border border-status-amber-border text-sm text-status-purple-text hover:bg-status-amber-border transition-colors"
-              >
-                Bible Gateway
-              </a>
-              <a
-                v-if="youVersionUrl"
-                :href="youVersionUrl"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="inline-flex items-center px-3 py-1 rounded-full border border-status-amber-border text-sm text-status-purple-text hover:bg-status-amber-border transition-colors"
-              >
-                YouVersion
-              </a>
-            </div>
-            <p class="text-sm text-status-amber-text">
-              Or try the BSB translation to fill in the verse text automatically.
-            </p>
+      <div
+        v-if="importError"
+        ref="importErrorRef"
+        class="mt-2 p-3 bg-status-amber-bg border border-status-amber-border rounded-lg space-y-2"
+      >
+        <template v-if="importErrorShowLink">
+          <p class="text-sm text-status-amber-text">
+            This translation is copyrighted. Copy the text from one of the links below and paste it into <strong>Verse text</strong>.
+          </p>
+          <div class="flex flex-wrap gap-2">
             <a
-              href="https://fetch.bible/content/need/"
+              :href="bibleGatewayUrl"
               target="_blank"
               rel="noopener noreferrer"
-              class="text-sm text-status-purple-text hover:underline inline-block"
+              class="inline-flex items-center px-3 py-1 rounded-full border border-status-amber-border text-sm text-status-purple-text hover:bg-status-amber-border transition-colors"
             >
-              Find out why popular Bibles can't be freely shared
+              Bible Gateway
             </a>
-          </template>
-          <p v-else class="text-sm text-status-amber-text">{{ importError }}</p>
-        </div>
+            <a
+              v-if="youVersionUrl"
+              :href="youVersionUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center px-3 py-1 rounded-full border border-status-amber-border text-sm text-status-purple-text hover:bg-status-amber-border transition-colors"
+            >
+              YouVersion
+            </a>
+          </div>
+          <p class="text-sm text-status-amber-text">
+            Or try the BSB translation to fill in the verse text automatically.
+          </p>
+          <a
+            href="https://fetch.bible/content/need/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-sm text-status-purple-text hover:underline inline-block"
+          >
+            Find out why popular Bibles can't be freely shared
+          </a>
+        </template>
+        <p v-else class="text-sm text-status-amber-text">{{ importError }}</p>
       </div>
-    </Transition>
+    </div>
 
     <div class="pt-1">
-      <label :for="contentId" class="block text-sm font-medium text-text-secondary mb-2">
+      <label :for="contentId" class="mb-2 block text-sm font-medium text-text-secondary">
         Verse text
       </label>
       <textarea
@@ -148,21 +146,15 @@
 import { nextTick } from 'vue'
 import CollectionPicker from './CollectionPicker.vue'
 import VerseReferenceInput from './VerseReferenceInput.vue'
-import { parseVerseSpanReference } from '../utils/bible-reference.js'
 
 const REFERENCE_FEEDBACK_DELAY_MS = 200
-const IMPORT_REVEAL_DELAY_MS = 200
-const IMPORT_REVEAL_WITH_FEEDBACK_DELAY_MS = 300
-
 export default {
   name: 'VerseFormFields',
   components: { CollectionPicker, VerseReferenceInput },
   data() {
     return {
       displayedReferenceWarning: '',
-      importVisible: false,
       referenceFeedbackTimer: null,
-      importRevealTimer: null,
       reduceMotion: false,
       motionPreference: null,
     }
@@ -250,11 +242,6 @@ export default {
     referenceFeedbackId() {
       return `${this.referenceId}-feedback`
     },
-    importEligible() {
-      return this.showImport
-        && Boolean(parseVerseSpanReference(this.modelValue.reference || ''))
-        && Boolean(String(this.modelValue.bibleVersion || '').trim())
-    },
   },
   watch: {
     referenceWarning() {
@@ -262,13 +249,6 @@ export default {
     },
     'modelValue.reference'() {
       this.scheduleReferenceFeedback()
-      this.scheduleImportReveal()
-    },
-    'modelValue.bibleVersion'() {
-      this.scheduleImportReveal()
-    },
-    showImport() {
-      this.scheduleImportReveal()
     },
     importErrorShowLink(showLink) {
       if (!showLink) return
@@ -285,11 +265,9 @@ export default {
     }
 
     this.scheduleReferenceFeedback()
-    this.scheduleImportReveal()
   },
   beforeUnmount() {
     clearTimeout(this.referenceFeedbackTimer)
-    clearTimeout(this.importRevealTimer)
     this.motionPreference?.removeEventListener?.('change', this.handleMotionPreferenceChange)
   },
   methods: {
@@ -325,33 +303,28 @@ export default {
         }
       }, delay)
     },
-    scheduleImportReveal() {
-      clearTimeout(this.importRevealTimer)
-
-      if (!this.importEligible) {
-        this.importVisible = false
-        return
-      }
-
-      const delay = this.reduceMotion
-        ? 0
-        : (this.referenceWarning ? IMPORT_REVEAL_WITH_FEEDBACK_DELAY_MS : IMPORT_REVEAL_DELAY_MS)
-      this.importRevealTimer = setTimeout(() => {
-        if (this.importEligible) {
-          this.importVisible = true
-        }
-      }, delay)
-    },
     handleMotionPreferenceChange(event) {
       this.reduceMotion = event.matches
       this.scheduleReferenceFeedback()
-      this.scheduleImportReveal()
     },
   },
 }
 </script>
 
 <style scoped>
+.verse-import-button {
+  gap: 0.4375rem;
+  padding-inline: 0.8125rem;
+  white-space: nowrap;
+}
+
+.verse-import-button svg {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  margin-left: -0.125rem;
+}
+
 .reference-feedback-enter-active,
 .reference-feedback-leave-active {
   max-height: 8rem;
@@ -366,22 +339,9 @@ export default {
   transform: translateY(-0.25rem);
 }
 
-.verse-import-action-enter-active,
-.verse-import-action-leave-active {
-  transition: opacity 150ms ease, transform 150ms ease;
-}
-
-.verse-import-action-enter-from,
-.verse-import-action-leave-to {
-  opacity: 0;
-  transform: translateY(-0.25rem);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .reference-feedback-enter-active,
-  .reference-feedback-leave-active,
-  .verse-import-action-enter-active,
-  .verse-import-action-leave-active {
+  .reference-feedback-leave-active {
     transition: none;
   }
 }
