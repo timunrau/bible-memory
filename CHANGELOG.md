@@ -1,3 +1,10 @@
+# [1.45.0](https://github.com/timunrau/rum1n8/compare/v1.44.1...v1.45.0) (2026-08-06)
+
+
+### Features
+
+* consolidate collection toolbar actions ([a774f6b](https://github.com/timunrau/rum1n8/commit/a774f6bb8e63a69d09e2afce6f04eea5ab2bd607))
+
 ## [1.44.1](https://github.com/timunrau/rum1n8/compare/v1.44.0...v1.44.1) (2026-08-06)
 
 
