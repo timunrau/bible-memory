@@ -293,6 +293,121 @@ test('start review CTA: omits due count when no verses are due', async ({ page }
   await expect(cta).not.toContainText('due')
 })
 
+test.describe('day-based review scheduling', () => {
+  test.use({ timezoneId: 'America/Winnipeg' })
+
+  const scheduledBase = {
+    bibleVersion: 'BSB',
+    createdAt: '2026-08-01T12:00:00.000Z',
+    lastModified: '2026-08-01T12:00:00.000Z',
+    masteredAt: '2026-08-01T12:00:00.000Z',
+    memorizationStatus: 'mastered' as const,
+    reviewCount: 1,
+    lastReviewed: '2026-08-01T12:00:00.000Z',
+    easeFactor: 2.5,
+    interval: 1,
+    reviewHistory: [],
+    collectionIds: [],
+  }
+
+  test('counts later-today, overdue, and unscheduled verses but excludes tomorrow', async ({ page }) => {
+    await page.clock.install({ time: new Date('2026-08-08T15:00:00.000Z') })
+    const verses = [
+      {
+        ...scheduledBase,
+        id: 'later-today',
+        reference: 'Psalm 1:1',
+        content: 'Blessed is the man',
+        nextReviewDate: '2026-08-09T04:30:00.000Z',
+      },
+      {
+        ...scheduledBase,
+        id: 'tomorrow',
+        reference: 'Psalm 2:1',
+        content: 'Why do the nations rage',
+        nextReviewDate: '2026-08-09T05:00:00.000Z',
+      },
+      {
+        ...scheduledBase,
+        id: 'overdue',
+        reference: 'Psalm 3:1',
+        content: 'O Lord how many are my foes',
+        nextReviewDate: '2026-08-07T12:00:00.000Z',
+      },
+      {
+        ...scheduledBase,
+        id: 'unscheduled',
+        reference: 'Psalm 4:1',
+        content: 'Answer me when I call',
+        nextReviewDate: null,
+      },
+    ]
+
+    await seedStorage(page, verses, [])
+    await page.reload()
+    await gotoApp(page, '?view=collections')
+
+    const dueTodayStat = page.locator('.almanac__stat').filter({ hasText: 'due today' })
+    await expect(dueTodayStat.locator('.almanac__numeral')).toHaveText('3')
+    await expect(page.getByTestId('nav-review').locator('span').filter({ hasText: /^3$/ })).toBeVisible()
+
+    await gotoApp(page, '?view=review-list')
+    const laterTodayCard = page.locator('.verse-card').filter({ hasText: 'Psalm 1:1' })
+    const tomorrowCard = page.locator('.verse-card').filter({ hasText: 'Psalm 2:1' })
+    const unscheduledCard = page.locator('.verse-card').filter({ hasText: 'Psalm 4:1' })
+
+    await expect(laterTodayCard).toHaveClass(/verse-card--due/)
+    await expect(laterTodayCard).toContainText('due')
+    await expect(tomorrowCard).not.toHaveClass(/verse-card--due/)
+    await expect(tomorrowCard).toContainText('1d')
+    await expect(unscheduledCard).toHaveClass(/verse-card--due/)
+
+    await tomorrowCard.click()
+    await expect(page.locator('h1')).toContainText('Psalm 2:1')
+  })
+
+  test('refreshes the due count when the local calendar day changes', async ({ page }) => {
+    await page.clock.install({ time: new Date('2026-08-08T04:59:30.000Z') })
+    await seedStorage(page, [{
+      ...scheduledBase,
+      id: 'midnight-due',
+      reference: 'Psalm 5:1',
+      content: 'Give ear to my words',
+      nextReviewDate: '2026-08-08T18:00:00.000Z',
+    }], [])
+    await page.reload()
+    await gotoApp(page, '?view=collections')
+
+    const dueTodayStat = page.locator('.almanac__stat').filter({ hasText: 'due today' })
+    await expect(dueTodayStat.locator('.almanac__numeral')).toHaveText('0')
+
+    await page.clock.runFor(60_000)
+
+    await expect(dueTodayStat.locator('.almanac__numeral')).toHaveText('1')
+  })
+
+  test('refreshes the due count when the app returns to the foreground', async ({ page }) => {
+    await page.clock.install({ time: new Date('2026-08-08T04:00:00.000Z') })
+    await seedStorage(page, [{
+      ...scheduledBase,
+      id: 'foreground-due',
+      reference: 'Psalm 6:1',
+      content: 'O Lord rebuke me not',
+      nextReviewDate: '2026-08-08T18:00:00.000Z',
+    }], [])
+    await page.reload()
+    await gotoApp(page, '?view=collections')
+
+    const dueTodayStat = page.locator('.almanac__stat').filter({ hasText: 'due today' })
+    await expect(dueTodayStat.locator('.almanac__numeral')).toHaveText('0')
+
+    await page.clock.setSystemTime(new Date('2026-08-08T06:00:00.000Z'))
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')))
+
+    await expect(dueTodayStat.locator('.almanac__numeral')).toHaveText('1')
+  })
+})
+
 test('start review CTA: click starts review of first (most-due) verse', async ({ page }) => {
   const base = {
     bibleVersion: 'BSB',

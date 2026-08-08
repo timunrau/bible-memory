@@ -65,7 +65,7 @@ test('schedule row shows next-review metadata for mastered verses', async ({ pag
   const row = page.getByTestId('verse-schedule-row')
   await expect(row).toBeVisible()
   await expect(row).toContainText(/Next review/)
-  await expect(row).toContainText('3d')
+  await expect(row).toContainText('Next review 3d')
   await expect(page.getByTestId('verse-schedule-change')).toBeVisible()
   await expect(page.getByTestId('verse-schedule-reset')).toBeVisible()
 })
@@ -101,8 +101,8 @@ test('change popover updates nextReviewDate and shows undo toast', async ({ page
   expect(verses[0].interval).toBe(7)
   expect(verses[0].reviewScheduleCustomized).toBe(true)
 
-  // Modal still open and the row reflects the new interval (~7d)
-  await expect(page.getByTestId('verse-schedule-row')).toContainText(/6d|7d/)
+  // Modal still open and the row reflects the new calendar-day interval.
+  await expect(page.getByTestId('verse-schedule-row')).toContainText('Next review 7d')
 })
 
 test('clicking outside the change popover closes it', async ({ page }) => {

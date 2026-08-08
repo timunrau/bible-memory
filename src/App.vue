@@ -1596,7 +1596,7 @@
             class="relative pt-1 text-xs text-text-muted"
             data-testid="verse-schedule-row"
           >
-            <span>Next review {{ formatReviewDate(editingVerse.nextReviewDate) }} &middot; {{ getTimeUntilReview(editingVerse) }}</span>
+            <span>Next review {{ getTimeUntilReview(editingVerse) }}</span>
             <span class="mx-1.5 opacity-60">&middot;</span>
             <button
               type="button"
@@ -2371,6 +2371,16 @@ import {
 import { calculateGrade, wasReviewedToday, calculateNextReviewDate } from './srs.js'
 import { buildCollectionCSV } from './utils/collection-csv.js'
 import { applyReviewFrequencyOverride, REVIEW_FREQUENCY_OPTIONS } from './review-schedule.js'
+import {
+  getLocalCalendarDayDifference,
+  getReviewDayState,
+  isVerseDueForReview as isVerseDueOnLocalDay,
+} from './utils/local-date.js'
+import {
+  buildDailyActivityData,
+  buildMasteredOverTimeData,
+  calculateCurrentStreak,
+} from './utils/activity-stats.js'
 import { Line, Bar } from 'vue-chartjs'
 import {
   Chart as ChartJS,
@@ -2768,6 +2778,7 @@ export default {
       resolveAppDialog(false)
     }
     const isOnline = ref(typeof navigator === 'undefined' ? true : navigator.onLine !== false)
+    const currentTime = ref(new Date())
     const isDev = import.meta.env.DEV
     const csvFileInput = ref(null)
     const csvTextarea = ref(null)
@@ -3844,120 +3855,14 @@ export default {
       )
     )
 
-    const currentStreak = computed(() => {
-      const reviewDatesSet = new Set()
-      verses.value.forEach(v => {
-        if (v.reviewHistory) {
-          v.reviewHistory.forEach(r => {
-            // Use local date to avoid timezone issues
-            const d = new Date(r.date)
-            const localDate = d.getFullYear() + '-' +
-              String(d.getMonth() + 1).padStart(2, '0') + '-' +
-              String(d.getDate()).padStart(2, '0')
-            reviewDatesSet.add(localDate)
-          })
-        }
-      })
-
-      if (reviewDatesSet.size === 0) return 0
-
-      const now = new Date()
-      const todayStr = now.getFullYear() + '-' +
-        String(now.getMonth() + 1).padStart(2, '0') + '-' +
-        String(now.getDate()).padStart(2, '0')
-
-      const yesterdayDate = new Date(now)
-      yesterdayDate.setDate(yesterdayDate.getDate() - 1)
-      const yesterdayStr = yesterdayDate.getFullYear() + '-' +
-        String(yesterdayDate.getMonth() + 1).padStart(2, '0') + '-' +
-        String(yesterdayDate.getDate()).padStart(2, '0')
-
-      // Streak must include today or yesterday to be active
-      if (!reviewDatesSet.has(todayStr) && !reviewDatesSet.has(yesterdayStr)) return 0
-
-      let streak = 0
-      let checkDate = new Date(now)
-      // Start from today if reviewed today, otherwise from yesterday
-      if (!reviewDatesSet.has(todayStr)) {
-        checkDate.setDate(checkDate.getDate() - 1)
-      }
-
-      while (true) {
-        const dateStr = checkDate.getFullYear() + '-' +
-          String(checkDate.getMonth() + 1).padStart(2, '0') + '-' +
-          String(checkDate.getDate()).padStart(2, '0')
-        if (reviewDatesSet.has(dateStr)) {
-          streak++
-          checkDate.setDate(checkDate.getDate() - 1)
-        } else {
-          break
-        }
-      }
-
-      return streak
-    })
+    const currentStreak = computed(() => calculateCurrentStreak(verses.value, currentTime.value))
 
     const masteredOverTimeData = computed(() => {
-      const countByDate = {}
-      verses.value.forEach(v => {
-        if (v.memorizationStatus === 'mastered' && v.masteredAt) {
-          const d = v.masteredAt.substring(0, 10)
-          const verseCount = countVersesInReference(v.reference)
-          countByDate[d] = (countByDate[d] || 0) + verseCount
-        }
-      })
-      const allDates = Object.keys(countByDate).sort()
-      if (allDates.length === 0) return { labels: [], data: [] }
-
-      const labels = []
-      const data = []
-      let cumulative = 0
-      allDates.forEach(d => {
-        cumulative += countByDate[d]
-        labels.push(d)
-        data.push(cumulative)
-      })
-      return { labels, data }
+      currentTime.value // Re-group if the device timezone changes while the app is open.
+      return buildMasteredOverTimeData(verses.value)
     })
 
-    const dailyActivityData = computed(() => {
-      const reviewsByDate = {}
-      const masteredByDate = {}
-
-      // Only show last 30 days
-      const cutoff = new Date()
-      cutoff.setDate(cutoff.getDate() - 30)
-      const cutoffStr = cutoff.toISOString().substring(0, 10)
-
-      verses.value.forEach(v => {
-        const verseCount = countVersesInReference(v.reference)
-        if (v.reviewHistory) {
-          v.reviewHistory.forEach(r => {
-            const date = r.date.substring(0, 10)
-            if (date >= cutoffStr) {
-              reviewsByDate[date] = (reviewsByDate[date] || 0) + verseCount
-            }
-          })
-        }
-        if (v.memorizationStatus === 'mastered' && v.masteredAt) {
-          const d = v.masteredAt.substring(0, 10)
-          if (d >= cutoffStr) {
-            masteredByDate[d] = (masteredByDate[d] || 0) + verseCount
-          }
-        }
-      })
-
-      const allDates = [...new Set([
-        ...Object.keys(reviewsByDate),
-        ...Object.keys(masteredByDate)
-      ])].sort()
-
-      return {
-        labels: allDates,
-        reviews: allDates.map(d => reviewsByDate[d] || 0),
-        mastered: allDates.map(d => masteredByDate[d] || 0)
-      }
-    })
+    const dailyActivityData = computed(() => buildDailyActivityData(verses.value, currentTime.value))
 
     // Chart helpers
     const getCssVar = (name) => {
@@ -4366,12 +4271,11 @@ export default {
 
     // Sort verses by next review date (closest first) for review list
     const reviewSortedVerses = computed(() => {
-      // Filter to only verses with nextReviewDate (mastered verses)
-      const versesWithReviewDate = verses.value.filter(v => v.nextReviewDate)
-      
-      return [...versesWithReviewDate].sort((a, b) => {
-        const dateA = new Date(a.nextReviewDate)
-        const dateB = new Date(b.nextReviewDate)
+      const masteredVerses = verses.value.filter(v => v.memorizationStatus === 'mastered')
+
+      return [...masteredVerses].sort((a, b) => {
+        const dateA = a.nextReviewDate ? new Date(a.nextReviewDate) : new Date(0)
+        const dateB = b.nextReviewDate ? new Date(b.nextReviewDate) : new Date(0)
         // Sort ascending (closest date first)
         return dateA - dateB
       })
@@ -5223,11 +5127,7 @@ export default {
 
     // Check if a verse is due for review (only for mastered verses)
     const isDueForReview = (verse) => {
-      if (verse.memorizationStatus !== 'mastered') return false
-      if (!verse.nextReviewDate) return true
-      const now = new Date()
-      const nextReview = new Date(verse.nextReviewDate)
-      return now >= nextReview
+      return isVerseDueOnLocalDay(verse, currentTime.value)
     }
 
     // Get memorization status display
@@ -5417,30 +5317,13 @@ export default {
     }
 
     const getTimeUntilReview = (verse) => {
-      if (!verse.nextReviewDate) return 'Now'
-      const now = new Date()
-      const nextReview = new Date(verse.nextReviewDate)
-      const diffTime = nextReview - now
-      
-      if (diffTime <= 0) return 'Due'
-      
-      const diffMinutes = Math.ceil(diffTime / (1000 * 60))
-      const diffHours = Math.ceil(diffTime / (1000 * 60 * 60))
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-      
-      if (diffMinutes < 60) return `${diffMinutes}m`
-      if (diffHours < 24) return `${diffHours}h`
-      return `${diffDays}d`
+      return getReviewDayState(verse.nextReviewDate, currentTime.value)?.label || ''
     }
 
     // Get days until review (for sorting/display)
     const getDaysUntilReview = (verse) => {
       if (!verse.nextReviewDate) return 0
-      const now = new Date()
-      const nextReview = new Date(verse.nextReviewDate)
-      const diffTime = nextReview - now
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-      return diffDays
+      return getLocalCalendarDayDifference(verse.nextReviewDate, currentTime.value) ?? 0
     }
 
     // Add new verse
@@ -6756,15 +6639,6 @@ export default {
         return true
       }
       return false
-    }
-
-    const formatReviewDate = (iso) => {
-      if (!iso) return ''
-      try {
-        return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-      } catch {
-        return ''
-      }
     }
 
     const overrideNextReview = (daysFromNow) => {
@@ -9451,6 +9325,16 @@ export default {
       }
     }
 
+    const refreshCurrentTime = () => {
+      currentTime.value = new Date()
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshCurrentTime()
+      }
+    }
+
     // Load verses on mount
     onMounted(async () => {
       loadCollections()
@@ -9488,12 +9372,16 @@ export default {
 
       document.addEventListener('scroll', handleWindowScroll, { passive: true, capture: true })
       document.addEventListener('click', handleSelectionDocumentClick)
+      document.addEventListener('visibilitychange', handleVisibilityChange)
       window.addEventListener('online', handleConnectivityChange)
       window.addEventListener('offline', handleConnectivityChange)
       handleConnectivityChange()
       handleWindowScroll()
 
-      syncTickIntervalId = setInterval(() => { syncTick.value++ }, 60_000)
+      syncTickIntervalId = setInterval(() => {
+        syncTick.value++
+        refreshCurrentTime()
+      }, 60_000)
 
       // Perform initial sync on app load
       await triggerSync()
@@ -9504,6 +9392,7 @@ export default {
       window.removeEventListener('popstate', handlePopState)
       document.removeEventListener('scroll', handleWindowScroll, { capture: true })
       document.removeEventListener('click', handleSelectionDocumentClick)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('online', handleConnectivityChange)
       window.removeEventListener('offline', handleConnectivityChange)
       if (toastTimeoutId) {
@@ -9750,7 +9639,6 @@ export default {
       closeEditVerseForm,
       handleDeleteVerseFromModal,
       scheduleActionsOpen,
-      formatReviewDate,
       overrideNextReview,
       resetVerseProgress,
       deleteVerse,
