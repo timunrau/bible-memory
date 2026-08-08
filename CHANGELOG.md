@@ -1,3 +1,10 @@
+## [1.45.2](https://github.com/timunrau/rum1n8/compare/v1.45.1...v1.45.2) (2026-08-08)
+
+
+### Bug Fixes
+
+* use local calendar days for reviews ([b9700a5](https://github.com/timunrau/rum1n8/commit/b9700a5907984147541e42b7629c9224a5aadeef))
+
 ## [1.45.1](https://github.com/timunrau/rum1n8/compare/v1.45.0...v1.45.1) (2026-08-08)
 
 
