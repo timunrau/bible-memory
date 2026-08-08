@@ -1,3 +1,10 @@
+## [1.45.1](https://github.com/timunrau/rum1n8/compare/v1.45.0...v1.45.1) (2026-08-08)
+
+
+### Bug Fixes
+
+* polish first-run guidance ([8084945](https://github.com/timunrau/rum1n8/commit/80849458c6d6abe109377c1957391d3fb4b49360))
+
 # [1.45.0](https://github.com/timunrau/rum1n8/compare/v1.44.1...v1.45.0) (2026-08-06)
 
 
