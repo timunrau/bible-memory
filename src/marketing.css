@@ -193,38 +193,6 @@ img {
   max-width: 38rem;
 }
 
-.hero__definition {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.7rem;
-  margin: 0 0 1rem;
-  max-width: 31rem;
-  font-size: 0.74rem;
-  line-height: 1.3;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--text-soft);
-}
-
-.hero__part-of-speech {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.26rem 0.56rem;
-  border: 1px solid rgba(200, 164, 90, 0.28);
-  border-radius: 999px;
-  background: rgba(200, 164, 90, 0.13);
-  color: var(--accent-warm-text);
-  font-weight: 700;
-}
-
-.hero__pronunciation {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-    monospace;
-  letter-spacing: 0.08em;
-  text-transform: none;
-}
-
 .hero h1,
 .section h2,
 .feature h3,
@@ -370,12 +338,6 @@ img {
   margin-top: 2.5rem;
 }
 
-.feature {
-  padding-top: 1.35rem;
-  border-top: 1px solid var(--border);
-}
-
-.feature__index,
 .story__eyebrow {
   margin: 0;
   color: var(--accent-strong);
@@ -386,7 +348,6 @@ img {
 }
 
 .feature h3 {
-  margin-top: 0.9rem;
   font-size: 1.38rem;
 }
 

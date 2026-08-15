@@ -357,9 +357,13 @@ async function captureReviewState(browser, baseUrl, colorScheme = 'light') {
 }
 
 async function captureAddVerseState(browser, baseUrl, colorScheme = 'light') {
-  const { context, page } = await createMobilePage(browser, buildStorageState({
-    collections: addVerseCollections,
-  }), colorScheme)
+  const { context, page } = await createMobilePage(browser, {
+    ...buildStorageState({ collections: addVerseCollections }),
+    'rum1n8-app-settings': JSON.stringify({
+      appSettings: { defaultBibleVersion: 'BSB' },
+      appSettingsLastModified: now,
+    }),
+  }, colorScheme)
 
   const suffix = colorScheme === 'dark' ? '-dark' : ''
   try {
