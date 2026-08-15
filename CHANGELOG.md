@@ -1,3 +1,15 @@
+# [1.48.0](https://github.com/timunrau/rum1n8/compare/v1.47.0...v1.48.0) (2026-08-15)
+
+
+### Bug Fixes
+
+* standardize sync reminder callout ([#152](https://github.com/timunrau/rum1n8/issues/152)) ([3d46606](https://github.com/timunrau/rum1n8/commit/3d46606281c1861a6058f478d28730ad0329a712))
+
+
+### Features
+
+* simplify marketing page ([#153](https://github.com/timunrau/rum1n8/issues/153)) ([55d3c35](https://github.com/timunrau/rum1n8/commit/55d3c358256c4c8a334d4987c9c706b946ae924d))
+
 # [1.47.0](https://github.com/timunrau/rum1n8/compare/v1.46.1...v1.47.0) (2026-08-15)
 
 
