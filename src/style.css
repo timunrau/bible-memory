@@ -999,6 +999,7 @@
   .completion-tray__actions .btn-primary,
   .completion-tray__actions .btn-secondary {
     min-width: 6.25rem;
+    white-space: nowrap;
   }
 
   @media (max-width: 430px) {
@@ -1013,6 +1014,24 @@
 
     .completion-tray__actions {
       flex-wrap: wrap;
+    }
+  }
+
+  @media (max-width: 340px) {
+    .completion-tray {
+      width: min(calc(100% - 1rem), 42rem);
+      padding-inline: 0.5rem;
+    }
+
+    .completion-tray__actions {
+      flex-wrap: nowrap;
+      gap: 0.4rem;
+    }
+
+    .completion-tray__actions .btn-primary,
+    .completion-tray__actions .btn-secondary {
+      min-width: 0;
+      padding-inline: 0.65rem;
     }
   }
 

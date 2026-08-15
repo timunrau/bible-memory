@@ -12,21 +12,21 @@
         <template v-if="context === 'memorization'">
           <button
             @click="$emit('retry')"
-            class="btn-secondary btn--sm"
+            class="btn-secondary"
           >
             Retry
           </button>
           <button
             v-if="memorizationMode !== 'master'"
             @click="$emit('advance')"
-            class="btn-primary btn--sm"
+            class="btn-primary"
           >
             Continue to {{ memorizationMode === 'learn' ? 'Memorize' : 'Master' }}
           </button>
           <button
             v-else
             @click="$emit('exit')"
-            class="btn-primary btn--sm"
+            class="btn-primary"
           >
             Done
           </button>
@@ -34,21 +34,21 @@
         <template v-else>
           <button
             @click="$emit('retry')"
-            class="btn-secondary btn--sm"
+            class="btn-secondary"
           >
             Retry
           </button>
           <button
             v-if="isLastInList"
             @click="$emit('done')"
-            class="btn-primary btn--sm"
+            class="btn-primary"
           >
             Done
           </button>
           <button
             v-else
             @click="$emit('next-verse')"
-            class="btn-primary btn--sm"
+            class="btn-primary"
           >
             Next Verse
           </button>
@@ -59,7 +59,7 @@
       <div class="completion-tray__actions">
         <button
           @click="$emit('retry')"
-          class="btn-primary btn--sm"
+          class="btn-primary"
         >
           Try Again
         </button>
