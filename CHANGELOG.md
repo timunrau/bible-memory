@@ -1,3 +1,10 @@
+# [1.46.0](https://github.com/timunrau/rum1n8/compare/v1.45.2...v1.46.0) (2026-08-15)
+
+
+### Features
+
+* improve completion tray keyboard behavior ([70132fe](https://github.com/timunrau/rum1n8/commit/70132fea353b7cc76e1697cc58cacf686b587711))
+
 ## [1.45.2](https://github.com/timunrau/rum1n8/compare/v1.45.1...v1.45.2) (2026-08-08)
 
 
