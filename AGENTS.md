@@ -17,6 +17,12 @@
 - If Playwright reports that Chromium is missing, run `npx playwright install chromium`.
 - In Codex's sandbox, always run `npm run test:e2e` with escalated permissions from the outset. The sandboxed run cannot launch Chrome reliably (`SIGABRT`/`EPERM`) and only wastes a full test attempt; escalation also permits Playwright's Vite server to open its local listening port.
 
+## Git Workflow
+
+- Do not create branches or pull requests for routine work in this repository unless the user explicitly requests one.
+- Work directly on `main`. Before editing files, switch to `main` and run `git pull --ff-only`.
+- When the user asks Codex to commit or push, commit directly to `main` and push to `origin/main`.
+
 ## Versioning
 
 - Before starting new work in this repo, run `git pull --ff-only` so local `main` includes any CI/semantic-release commits that landed after the last push.
