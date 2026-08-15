@@ -5,7 +5,7 @@ defineProps({
   icon: {
     type: String,
     default: 'lightbulb',
-    validator: (value) => ['lightbulb', 'none'].includes(value),
+    validator: (value) => ['lightbulb', 'download', 'none'].includes(value),
   },
   pointer: {
     type: String,
@@ -33,17 +33,25 @@ defineEmits(['dismiss'])
         class="onboarding-guidance__content"
         :class="{ 'onboarding-guidance__content--title-only': !body }"
       >
-        <div v-if="icon === 'lightbulb'" class="onboarding-guidance__icon">
+        <div v-if="icon !== 'none'" class="onboarding-guidance__icon">
           <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 18h6" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 22h4" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3a6 6 0 00-3.6 10.8c.79.59 1.35 1.44 1.56 2.4h4.08c.21-.96.77-1.81 1.56-2.4A6 6 0 0012 3z" />
+            <template v-if="icon === 'download'">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </template>
+            <template v-else>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 18h6" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 22h4" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3a6 6 0 00-3.6 10.8c.79.59 1.35 1.44 1.56 2.4h4.08c.21-.96.77-1.81 1.56-2.4A6 6 0 0012 3z" />
+            </template>
           </svg>
         </div>
 
         <div class="onboarding-guidance__copy">
           <p class="onboarding-guidance__title">{{ title }}</p>
           <p v-if="body" class="onboarding-guidance__body">{{ body }}</p>
+          <div v-if="$slots.actions" class="onboarding-guidance__actions">
+            <slot name="actions" />
+          </div>
         </div>
 
         <button
@@ -122,6 +130,10 @@ defineEmits(['dismiss'])
   font-size: 0.875rem;
   line-height: 1.5;
   color: var(--color-text-secondary);
+}
+
+.onboarding-guidance__actions {
+  margin-top: 0.75rem;
 }
 
 .onboarding-guidance__close {
