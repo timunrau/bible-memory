@@ -1,3 +1,10 @@
+# [1.47.0](https://github.com/timunrau/rum1n8/compare/v1.46.1...v1.47.0) (2026-08-15)
+
+
+### Features
+
+* enlarge completion tray actions ([5a16167](https://github.com/timunrau/rum1n8/commit/5a16167721d81a7c2701b2ce1f8b8729860e4dab))
+
 ## [1.46.1](https://github.com/timunrau/rum1n8/compare/v1.46.0...v1.46.1) (2026-08-15)
 
 # [1.46.0](https://github.com/timunrau/rum1n8/compare/v1.45.2...v1.46.0) (2026-08-15)
