@@ -771,6 +771,42 @@ test('review: input focused after Next Verse', async ({ page }) => {
   await expect(page.locator('#letter-input-review')).toBeFocused()
 })
 
+test('review: Enter activates Next Verse', async ({ page }) => {
+  const yesterday = new Date(Date.now() - 86400000).toISOString()
+  const makeVerse = (id: string, reference: string, content: string) => ({
+    id,
+    reference,
+    content,
+    bibleVersion: 'BSB',
+    createdAt: new Date().toISOString(),
+    lastModified: new Date().toISOString(),
+    memorizationStatus: 'mastered',
+    reviewCount: 1,
+    lastReviewed: yesterday,
+    nextReviewDate: yesterday,
+    easeFactor: 2.5,
+    interval: 1,
+    reviewHistory: [],
+    collectionIds: [],
+  })
+  await seedStorage(page, [
+    makeVerse('enter-next-v1', 'Psalm 1:1', 'Blessed is'),
+    makeVerse('enter-next-v2', 'Psalm 2:1', 'Why the'),
+  ], [])
+  await page.reload()
+  await gotoApp(page, '?view=review-list')
+  await page.getByText('Psalm 1:1').click()
+
+  const input = page.locator('#letter-input-review')
+  await expect(input).toBeFocused()
+  await page.keyboard.type('bi')
+  await expect(page.getByRole('button', { name: 'Next Verse' })).toBeVisible()
+  await page.keyboard.press('Enter')
+
+  await expect(page.locator('h1')).toContainText('Psalm 2:1')
+  await expect(input).toBeFocused()
+})
+
 for (const modeName of ['Learn', 'Memorize'] as const) {
   test(`review swipe after switching to ${modeName} keeps verse content and input live`, async ({ page }) => {
     const yesterday = new Date(Date.now() - 86400000).toISOString()
@@ -838,6 +874,49 @@ test.describe('mobile review swipe mode transitions', () => {
     deviceScaleFactor: 2,
   })
 
+  test('completion tray dismisses focus and Retry and Next Verse restore it', async ({ page }) => {
+    const yesterday = new Date(Date.now() - 86400000).toISOString()
+    const makeVerse = (id: string, reference: string, content: string) => ({
+      id,
+      reference,
+      content,
+      bibleVersion: 'BSB',
+      createdAt: new Date().toISOString(),
+      lastModified: new Date().toISOString(),
+      memorizationStatus: 'mastered',
+      reviewCount: 1,
+      lastReviewed: yesterday,
+      nextReviewDate: yesterday,
+      easeFactor: 2.5,
+      interval: 1,
+      reviewHistory: [],
+      collectionIds: [],
+    })
+    await seedStorage(page, [
+      makeVerse('mobile-focus-v1', 'Psalm 1:1', 'Alpha'),
+      makeVerse('mobile-focus-v2', 'Psalm 2:1', 'Beta'),
+    ], [])
+    await page.reload()
+    await gotoApp(page, '?view=review-list')
+    await page.getByText('Psalm 1:1').click()
+
+    const input = page.locator('#letter-input-review')
+    await expect(input).toBeFocused()
+    await page.keyboard.type('a')
+    await expect(page.getByRole('button', { name: 'Next Verse' })).toBeVisible()
+    await expect(input).not.toBeFocused()
+
+    await page.getByRole('button', { name: 'Retry' }).tap()
+    await expect(input).toBeFocused()
+
+    await page.keyboard.type('a')
+    await expect(input).not.toBeFocused()
+    await page.getByRole('button', { name: 'Next Verse' }).tap()
+
+    await expect(page.locator('h1')).toContainText('Psalm 2:1')
+    await expect(input).toBeFocused()
+  })
+
   for (const modeName of ['Learn', 'Memorize'] as const) {
     test(`review swipe after master swipe then switching to ${modeName} keeps content live`, async ({ page }) => {
       const pageErrors: string[] = []
@@ -900,14 +979,16 @@ test.describe('mobile review swipe mode transitions', () => {
       await gotoApp(page, '?view=review-list')
       await page.getByText('Psalm 1:1').click()
 
-      await expect(page.locator('#letter-input-review')).toBeAttached()
+      await expect(page.locator('#letter-input-review')).toBeFocused()
       await dragPracticeVerseWithTouch(page, 'next')
       await expect(page.locator('h1')).toContainText('Psalm 2:1')
       await expect(page.locator('.practice-swipe-panel--active .practice-card')).toContainText('Beta')
       await expect(page.locator('.practice-swipe-panel--active .mode-chip[aria-current="step"]')).toContainText('Master')
+      await expect(page.locator('#letter-input-review')).toBeFocused()
 
-      await page.locator('.practice-swipe-panel--active .mode-chip').filter({ hasText: modeName }).click()
+      await page.locator('.practice-swipe-panel--active .mode-chip').filter({ hasText: modeName }).tap()
       await expect(page.locator('.practice-swipe-panel--active .mode-chip[aria-current="step"]')).toContainText(modeName)
+      await expect(page.locator('#letter-input-review')).toBeFocused()
 
       await dragPracticeVerseWithTouch(page, 'next')
 

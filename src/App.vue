@@ -8380,21 +8380,16 @@ export default {
 
     // Handle key press events
     const handleKeyPress = (event) => {
-      // When review completion modal is open, Enter advances — to the next verse, or
-      // exits the review session if this was the last verse in the source list.
       if (
         event.key === 'Enter' &&
-        reviewingVerse.value &&
-        allWordsRevealed.value &&
-        reviewCompletionMeetsAccuracyRequirement.value
+        allWordsRevealed.value
       ) {
-        event.preventDefault()
-        if (isLastInReviewList.value) {
-          exitReview()
-        } else {
-          nextVerse()
+        const primaryAction = document.querySelector('.completion-tray .btn-primary')
+        if (primaryAction instanceof HTMLButtonElement) {
+          event.preventDefault()
+          primaryAction.click()
+          return
         }
-        return
       }
 
       // Allow backspace, delete, arrow keys, etc.

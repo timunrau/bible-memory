@@ -16,6 +16,52 @@ test.beforeEach(async ({ page }) => {
   await page.reload()
 })
 
+test.describe('mobile memorization completion', () => {
+  test.use({
+    viewport: { width: 393, height: 851 },
+    isMobile: true,
+    hasTouch: true,
+    deviceScaleFactor: 2,
+  })
+
+  test('completion tray dismisses focus and Retry and Continue restore it', async ({ page }) => {
+    const verse = [{
+      ...sampleVerses[0],
+      id: 'mobile-completion-keyboard',
+      reference: 'John 1:1',
+      content: 'One',
+      memorizationStatus: 'unmemorized',
+    }]
+    const collections = [{ id: 'c1', name: 'Test', description: '', createdAt: new Date().toISOString(), lastModified: new Date().toISOString() }]
+    await seedStorage(page, verse, collections)
+    await page.reload()
+    await gotoApp(page, '?view=collections')
+    await page.getByText('All Verses').click()
+    await page.getByText('John 1:1').first().click()
+
+    const input = page.locator('#letter-input-memorize')
+    await expect(input).toBeFocused()
+    await page.keyboard.type('o')
+
+    await expect(page.getByText('Learned').first()).toBeVisible()
+    await expect(input).not.toBeFocused()
+
+    await page.locator('.practice-swipe-panel--active .practice-card').click()
+    await expect(input).not.toBeFocused()
+
+    await page.getByRole('button', { name: 'Retry' }).tap()
+    await expect(input).toBeFocused()
+
+    await page.keyboard.type('o')
+    await expect(page.getByText('Learned').first()).toBeVisible()
+    await expect(input).not.toBeFocused()
+
+    await page.getByRole('button', { name: /Continue to Memorize/i }).tap()
+    await expect(page.locator('.mode-chip[aria-current="step"]')).toContainText('Memorize')
+    await expect(input).toBeFocused()
+  })
+})
+
 test('start from verse list -> click verse -> enters memorization screen', async ({ page }) => {
   const collections = [{ id: 'c1', name: 'Test', description: '', createdAt: new Date().toISOString(), lastModified: new Date().toISOString() }]
   await seedStorage(page, sampleVerses, collections)
@@ -131,6 +177,31 @@ test('memorization: input focused after Continue to Memorize', async ({ page }) 
 
   await expect(page.locator('#letter-input-memorize')).toBeAttached()
   await expect(page.locator('#letter-input-memorize')).toBeFocused()
+})
+
+test('memorization: Enter activates the completion tray primary action', async ({ page }) => {
+  const verse = [{
+    ...sampleVerses[0],
+    id: 'enter-to-continue',
+    reference: 'John 1:1',
+    content: 'One',
+    memorizationStatus: 'unmemorized',
+  }]
+  const collections = [{ id: 'c1', name: 'Test', description: '', createdAt: new Date().toISOString(), lastModified: new Date().toISOString() }]
+  await seedStorage(page, verse, collections)
+  await page.reload()
+  await gotoApp(page, '?view=collections')
+  await page.getByText('All Verses').click()
+  await page.getByText('John 1:1').first().click()
+
+  const input = page.locator('#letter-input-memorize')
+  await expect(input).toBeFocused()
+  await page.keyboard.type('o')
+  await expect(page.getByRole('button', { name: /Continue to Memorize/i })).toBeVisible()
+  await page.keyboard.press('Enter')
+
+  await expect(page.locator('.mode-chip[aria-current="step"]')).toContainText('Memorize')
+  await expect(input).toBeFocused()
 })
 
 test('memorization: input focused after Try Again', async ({ page }) => {

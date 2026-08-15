@@ -238,7 +238,7 @@
 </template>
 
 <script>
-import { computed, ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import OnboardingCallout from './OnboardingCallout.vue'
 
 export default {
@@ -371,12 +371,24 @@ export default {
       return Array.isArray(value) ? value[0] : value
     }
 
+    function hasCoarsePointer() {
+      return typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches === true
+    }
+
     function focusInput() {
+      if (props.showTray && hasCoarsePointer()) return
+
       const input = getRefElement(inputRef.value)
       if (input) {
         input.focus()
       }
     }
+
+    watch(() => props.showTray, (showTray) => {
+      if (!showTray || !hasCoarsePointer()) return
+
+      getRefElement(inputRef.value)?.blur()
+    }, { flush: 'post' })
 
     function getViewportWidth() {
       if (typeof window === 'undefined') return 390
