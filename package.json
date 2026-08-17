@@ -30,7 +30,7 @@
   },
   "dependencies": {
     "@gracious.tech/bible-references": "^1.2.1",
-    "@gracious.tech/fetch-client": "^2.3.0",
+    "@gracious.tech/fetch-client": "^2.4.0",
     "chart.js": "^4.5.1",
     "cors": "^2.8.6",
     "express": "^5.2.1",
