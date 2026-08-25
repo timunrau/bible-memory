@@ -81,6 +81,23 @@ test('Stats tab shows current streak from review history', async ({ page }) => {
   await expect(page.locator('.almanac__stat').filter({ hasText: 'day streak' }).getByText(/[2-9]/)).toBeVisible({ timeout: 5000 })
 })
 
+test('Stats tab includes mastered days in the current streak', async ({ page }) => {
+  const verses = [
+    makeVerse('v1', 'John 3:16', {
+      reviewDates: [todayISO()],
+    }),
+    makeVerse('v2', 'Psalm 23:1', {
+      mastered: true,
+      masteredAt: daysAgo(1),
+    }),
+  ]
+  await seedVerses(page, verses)
+  await page.reload()
+
+  await page.getByTestId('nav-stats').click()
+  await expect(page.locator('.almanac__stat').filter({ hasText: 'day streak' }).getByText('2', { exact: true })).toBeVisible()
+})
+
 test('Stats tab shows Daily Activity card with chart', async ({ page }) => {
   const verses = [
     makeVerse('v1', 'John 3:16', {

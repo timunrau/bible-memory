@@ -2,16 +2,21 @@ import { countVersesInReference } from './verse-count.js'
 import { getLocalDateKey } from './local-date.js'
 
 export function calculateCurrentStreak(verses = [], now = new Date()) {
-  const reviewDates = new Set()
+  const activityDates = new Set()
 
   verses.forEach((verse) => {
     verse.reviewHistory?.forEach((review) => {
       const dateKey = getLocalDateKey(review.date)
-      if (dateKey) reviewDates.add(dateKey)
+      if (dateKey) activityDates.add(dateKey)
     })
+
+    if (verse.memorizationStatus === 'mastered' && verse.masteredAt) {
+      const dateKey = getLocalDateKey(verse.masteredAt)
+      if (dateKey) activityDates.add(dateKey)
+    }
   })
 
-  if (reviewDates.size === 0) return 0
+  if (activityDates.size === 0) return 0
 
   const today = new Date(now)
   const todayKey = getLocalDateKey(today)
@@ -19,12 +24,12 @@ export function calculateCurrentStreak(verses = [], now = new Date()) {
   yesterday.setDate(yesterday.getDate() - 1)
   const yesterdayKey = getLocalDateKey(yesterday)
 
-  if (!reviewDates.has(todayKey) && !reviewDates.has(yesterdayKey)) return 0
+  if (!activityDates.has(todayKey) && !activityDates.has(yesterdayKey)) return 0
 
   let streak = 0
-  const checkDate = reviewDates.has(todayKey) ? today : yesterday
+  const checkDate = activityDates.has(todayKey) ? today : yesterday
 
-  while (reviewDates.has(getLocalDateKey(checkDate))) {
+  while (activityDates.has(getLocalDateKey(checkDate))) {
     streak++
     checkDate.setDate(checkDate.getDate() - 1)
   }

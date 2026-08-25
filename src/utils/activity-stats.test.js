@@ -52,4 +52,24 @@ describe('local-date activity statistics', () => {
       new Date('2026-08-08T12:00:00.000Z')
     )).toBe(1)
   })
+
+  it('counts mastered days alongside review days in the current streak', () => {
+    const verses = [
+      {
+        reviewHistory: [{ date: '2026-08-24T17:00:00.000Z' }],
+      },
+      {
+        memorizationStatus: 'mastered',
+        masteredAt: '2026-08-23T17:00:00.000Z',
+      },
+      {
+        reviewHistory: [{ date: '2026-08-22T17:00:00.000Z' }],
+      },
+    ]
+
+    expect(calculateCurrentStreak(
+      verses,
+      new Date('2026-08-24T18:00:00.000Z')
+    )).toBe(3)
+  })
 })
