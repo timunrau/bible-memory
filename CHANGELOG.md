@@ -1,3 +1,10 @@
+## [1.48.1](https://github.com/timunrau/rum1n8/compare/v1.48.0...v1.48.1) (2026-08-25)
+
+
+### Bug Fixes
+
+* include mastery activity in streaks ([48da9e6](https://github.com/timunrau/rum1n8/commit/48da9e60bd4959198417fe20399da3b6dc06143d))
+
 # [1.48.0](https://github.com/timunrau/rum1n8/compare/v1.47.0...v1.48.0) (2026-08-15)
 
 
