@@ -2082,8 +2082,83 @@ Philippians 2:3,"Value others above yourselves",NIV,Core Values/Humility,30,60</
               maxlength="10"
               class="mt-3 w-full px-4 py-3 border border-border-input rounded-lg focus:ring-0 focus:border-accent outline-none bg-overlay text-text-primary uppercase tracking-wider"
               style="text-transform: uppercase;"
+              @focus="handleDefaultBibleVersionFocus"
               @input="updateDefaultBibleVersion($event.target.value)"
+              @blur="commitDefaultBibleVersionCache"
             />
+            <div
+              v-if="bibleCacheStatus.kind !== 'idle' && bibleCacheStatus.kind !== 'unsupported'"
+              class="mt-3 text-sm"
+              :class="bibleCacheStatus.kind === 'error'
+                ? 'text-status-error-text'
+                : bibleCacheStatus.kind === 'ready'
+                  ? 'text-status-success-text'
+                  : 'text-text-muted'"
+              data-testid="default-bible-cache-status"
+              role="status"
+              aria-live="polite"
+            >
+              <div class="flex items-center justify-between gap-3">
+                <div class="flex min-w-0 items-center gap-2">
+                  <svg
+                    v-if="bibleCacheStatus.kind === 'ready'"
+                    class="h-5 w-5 shrink-0"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.86-9.94a.75.75 0 0 0-1.22-.87l-3.43 4.8-1.85-1.85a.75.75 0 1 0-1.06 1.06l2.47 2.47a.75.75 0 0 0 1.14-.09l3.95-5.52Z" clip-rule="evenodd" />
+                  </svg>
+                  <svg
+                    v-else-if="bibleCacheStatus.kind === 'checking' || bibleCacheStatus.kind === 'downloading'"
+                    class="h-5 w-5 shrink-0 animate-spin"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <circle class="opacity-25" cx="10" cy="10" r="7" stroke="currentColor" stroke-width="2" />
+                    <path class="opacity-75" d="M17 10a7 7 0 0 0-7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                  </svg>
+                  <svg
+                    v-else-if="bibleCacheStatus.kind === 'waiting'"
+                    class="h-5 w-5 shrink-0"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path d="M6.25 4.5A.75.75 0 0 1 7 5.25v9.5a.75.75 0 0 1-1.5 0v-9.5a.75.75 0 0 1 .75-.75Zm7.5 0a.75.75 0 0 1 .75.75v9.5a.75.75 0 0 1-1.5 0v-9.5a.75.75 0 0 1 .75-.75Z" />
+                  </svg>
+                  <svg
+                    v-else
+                    class="h-5 w-5 shrink-0"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-8.75-3.25a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0v-3.5ZM10 14a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd" />
+                  </svg>
+                  <span class="font-medium">{{ bibleCacheStatusMessage }}</span>
+                </div>
+                <button
+                  v-if="bibleCacheStatus.kind === 'error'"
+                  type="button"
+                  class="shrink-0 font-semibold text-accent hover:text-accent-strong"
+                  @click="retryDefaultBibleVersionCache"
+                >
+                  Retry
+                </button>
+              </div>
+              <div
+                v-if="bibleCacheStatus.kind === 'downloading' && bibleCacheStatus.total > 0"
+                class="mt-2 h-1.5 overflow-hidden rounded-full bg-border-default"
+                aria-hidden="true"
+              >
+                <div
+                  class="h-full rounded-full bg-accent-strong transition-[width] duration-200"
+                  :style="{ width: `${Math.round((bibleCacheStatus.completed / bibleCacheStatus.total) * 100)}%` }"
+                />
+              </div>
+            </div>
           </div>
           <div class="rounded-xl bg-sunken p-4">
             <label class="flex items-start gap-4 cursor-pointer">
@@ -2306,7 +2381,7 @@ Philippians 2:3,"Value others above yourselves",NIV,Core Values/Humility,30,60</
 <script>
 import { ref, onMounted, onBeforeUnmount, onUpdated, computed, nextTick, watch } from 'vue'
 import Fuse from 'fuse.js'
-import { FetchClient } from '@gracious.tech/fetch-client'
+import { BibleCacheMissError, createBibleCacheService, resolveBibleTranslationId } from './bible-cache.js'
 import {
   syncData,
   markVerseDeleted,
@@ -2808,6 +2883,41 @@ export default {
     const backupNudgeStage = ref(Number(localStorage.getItem('rum1n8-backup-nudge-stage') || 0))
     const reviewCompletedCount = ref(Number(localStorage.getItem('rum1n8-review-completed-count') || 0))
     const appSettings = ref(getAppSettings())
+    const defaultBibleVersionEditing = ref(false)
+    const bibleCacheStatus = ref({
+      kind: 'idle',
+      version: '',
+      translationId: null,
+      completed: 0,
+      total: 0,
+      error: null,
+    })
+    const bibleCacheService = createBibleCacheService({
+      onStatus: status => {
+        bibleCacheStatus.value = status
+      },
+    })
+    const bibleCacheStatusMessage = computed(() => {
+      const status = bibleCacheStatus.value
+
+      if (status.kind === 'checking') return 'Checking availability…'
+      if (status.kind === 'downloading') {
+        return `Downloading for offline use · ${status.completed} of ${status.total}`
+      }
+      if (status.kind === 'ready') return 'Available offline'
+      if (status.kind === 'unsupported') return ''
+      if (status.kind === 'waiting') {
+        return status.completed > 0
+          ? `Waiting for connection · ${status.completed} of ${status.total}`
+          : 'Waiting for connection'
+      }
+      if (status.kind === 'error') {
+        return status.error?.includes('not available in this browser')
+          ? 'Offline storage unavailable'
+          : 'Download incomplete'
+      }
+      return ''
+    })
     const initialOnboardingUiState = getOnboardingUiState()
     const onboardingDismissed = ref(initialOnboardingUiState.onboardingDismissed)
     const practiceModeHintsSeen = ref(initialOnboardingUiState.practiceModeHintsSeen)
@@ -2865,8 +2975,6 @@ export default {
     const importingVerse = ref(false)
     const importError = ref(null)
     const importErrorShowLink = ref(false)
-    const bibleClient = ref(null)
-    const bibleCollection = ref(null)
     const newVerseReferenceTouched = ref(false)
     const useNewVerseBibleVersionAsDefault = ref(false)
     const editedVerseReferenceTouched = ref(false)
@@ -3021,7 +3129,7 @@ export default {
     const newVerse = ref({
       reference: '',
       content: '',
-      bibleVersion: '',
+      bibleVersion: appSettings.value.defaultBibleVersion || '',
       collectionIds: []
     })
 
@@ -5385,13 +5493,8 @@ export default {
 
     // Initialize Bible client lazily
     const initBibleClient = async () => {
-      if (!bibleClient.value) {
-        bibleClient.value = new FetchClient()
-      }
-      if (!bibleCollection.value) {
-        bibleCollection.value = await bibleClient.value.fetch_collection()
-      }
-      return { client: bibleClient.value, collection: bibleCollection.value }
+      const collection = await bibleCacheService.fetchCollection()
+      return { client: bibleCacheService.client, collection }
     }
 
     // Main import function
@@ -5415,31 +5518,12 @@ export default {
         return
       }
 
-      if (!isOnline.value) {
-        importError.value = 'Verse text import needs an internet connection. You can still paste content manually.'
-        return
-      }
-
       importingVerse.value = true
 
       try {
         const { collection } = await initBibleClient()
 
-        // Try to find the translation with different ID formats
-        // Users might enter "BSB", but the API uses "eng_bsb"
-        const versionVariants = [
-          version,
-          `eng_${version}`,
-          version.replace(/^eng_/, ''),
-        ]
-
-        let translationId = null
-        for (const variant of versionVariants) {
-          if (collection.bibles.has_resource(variant)) {
-            translationId = variant
-            break
-          }
-        }
+        const translationId = resolveBibleTranslationId(collection, version)
 
         if (!translationId) {
           importError.value = `${version.toUpperCase()} is not available for import.`
@@ -5502,7 +5586,9 @@ export default {
 
       } catch (err) {
         console.error('Import error:', err)
-        importError.value = `Failed to import verse: ${err.message}`
+        importError.value = err instanceof BibleCacheMissError && !isOnline.value
+          ? 'This translation has not finished downloading for offline import. Reconnect to finish the download, or paste content manually.'
+          : `Failed to import verse: ${err.message}`
         importingVerse.value = false
       }
     }
@@ -8797,6 +8883,9 @@ export default {
     }
 
     const closePracticeSettings = () => {
+      if (defaultBibleVersionEditing.value) {
+        commitDefaultBibleVersionCache()
+      }
       showPracticeSettings.value = false
       consumeModalState('practiceSettings')
     }
@@ -8823,6 +8912,45 @@ export default {
         defaultBibleVersion: value
       })
     }
+
+    const reconcileDefaultBibleVersionCache = ({ refreshManifest = isOnline.value } = {}) => {
+      bibleCacheService.reconcile(appSettings.value.defaultBibleVersion, {
+        online: isOnline.value,
+        refreshManifest,
+      }).catch((error) => {
+        console.error('Bible cache error:', error)
+        bibleCacheStatus.value = {
+          kind: 'error',
+          version: appSettings.value.defaultBibleVersion,
+          translationId: null,
+          completed: 0,
+          total: 0,
+          error: 'Could not prepare this translation for offline import.',
+        }
+      })
+    }
+
+    const handleDefaultBibleVersionFocus = () => {
+      defaultBibleVersionEditing.value = true
+    }
+
+    const commitDefaultBibleVersionCache = () => {
+      defaultBibleVersionEditing.value = false
+      reconcileDefaultBibleVersionCache()
+    }
+
+    const retryDefaultBibleVersionCache = () => {
+      reconcileDefaultBibleVersionCache({ refreshManifest: isOnline.value })
+    }
+
+    watch(
+      () => appSettings.value.defaultBibleVersion,
+      (version, previousVersion) => {
+        if (version === previousVersion || defaultBibleVersionEditing.value) return
+        reconcileDefaultBibleVersionCache()
+      },
+      { immediate: true }
+    )
 
     const updateAnalyticsOptOut = (optOut) => {
       saveAppSettingsLocally({
@@ -9315,6 +9443,10 @@ export default {
       isOnline.value = typeof navigator === 'undefined' ? true : navigator.onLine !== false
       syncStateVersion.value++
 
+      if (wasOnline !== isOnline.value) {
+        reconcileDefaultBibleVersionCache({ refreshManifest: isOnline.value })
+      }
+
       if (!wasOnline && isOnline.value && isSyncConfigured()) {
         triggerSync(false)
       }
@@ -9417,6 +9549,7 @@ export default {
       if (syncTickIntervalId) {
         clearInterval(syncTickIntervalId)
       }
+      bibleCacheService.dispose()
       clearVerseLongPress()
     })
 
@@ -9687,6 +9820,11 @@ export default {
       manualSyncFromDrawer,
       updateRequireReferenceTyping,
       updateDefaultBibleVersion,
+      handleDefaultBibleVersionFocus,
+      commitDefaultBibleVersionCache,
+      retryDefaultBibleVersionCache,
+      bibleCacheStatus,
+      bibleCacheStatusMessage,
       updateAnalyticsOptOut,
       analyticsAvailable,
       syncing,

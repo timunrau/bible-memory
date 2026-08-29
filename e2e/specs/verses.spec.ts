@@ -276,11 +276,10 @@ test('add verse import: stays visible, validates on click, and clears stale offl
   await page.evaluate(() => window.dispatchEvent(new Event('offline')))
   await importButton.click()
 
-  await expect(page.getByText('Verse text import needs an internet connection. You can still paste content manually.')).toBeVisible()
-  expect(bibleRequests).toEqual([])
+  await expect(page.getByText('This translation has not finished downloading for offline import. Reconnect to finish the download, or paste content manually.')).toBeVisible()
 
   await reference.fill('John 3:17')
-  await expect(page.getByText(/Verse text import needs an internet connection/i)).toHaveCount(0)
+  await expect(page.getByText(/has not finished downloading for offline import/i)).toHaveCount(0)
   await page.context().setOffline(false)
 })
 

@@ -20,8 +20,14 @@ const STORAGE_KEYS = [
 ]
 
 export async function clearAppStorage(page: Page) {
-  await page.evaluate((keys: string[]) => {
+  await page.evaluate(async (keys: string[]) => {
     keys.forEach((key) => localStorage.removeItem(key))
+    const cacheNames = await caches.keys()
+    await Promise.all(
+      cacheNames
+        .filter(name => name.startsWith('rum1n8-bible-'))
+        .map(name => caches.delete(name))
+    )
   }, STORAGE_KEYS)
 }
 
