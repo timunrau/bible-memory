@@ -1,3 +1,10 @@
+# [1.49.0](https://github.com/timunrau/rum1n8/compare/v1.48.2...v1.49.0) (2026-08-29)
+
+
+### Features
+
+* cache default translation for offline import ([3641cb4](https://github.com/timunrau/rum1n8/commit/3641cb4e6a558c6319efcc4e3d024bd2947159cd))
+
 ## [1.48.2](https://github.com/timunrau/rum1n8/compare/v1.48.1...v1.48.2) (2026-08-25)
 
 ## [1.48.1](https://github.com/timunrau/rum1n8/compare/v1.48.0...v1.48.1) (2026-08-25)
