@@ -36,7 +36,7 @@
     "express": "^5.2.1",
     "fuse.js": "^7.5.0",
     "http-proxy-middleware": "^4.2.0",
-    "vue": "^3.5.41",
+    "vue": "^3.5.42",
     "vue-chartjs": "^5.3.4",
     "webdav": "^5.8.0"
   },
