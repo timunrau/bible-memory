@@ -347,7 +347,7 @@ test.describe('day-based review scheduling', () => {
     await page.reload()
     await gotoApp(page, '?view=collections')
 
-    const dueTodayStat = page.locator('.almanac__stat').filter({ hasText: 'due today' })
+    const dueTodayStat = page.locator('.almanac__stat').filter({ has: page.locator('.almanac__label', { hasText: /^due$/ }) })
     await expect(dueTodayStat.locator('.almanac__numeral')).toHaveText('3')
     await expect(page.getByTestId('nav-review').locator('span').filter({ hasText: /^3$/ })).toBeVisible()
 
@@ -378,7 +378,7 @@ test.describe('day-based review scheduling', () => {
     await page.reload()
     await gotoApp(page, '?view=collections')
 
-    const dueTodayStat = page.locator('.almanac__stat').filter({ hasText: 'due today' })
+    const dueTodayStat = page.locator('.almanac__stat').filter({ has: page.locator('.almanac__label', { hasText: /^due$/ }) })
     await expect(dueTodayStat.locator('.almanac__numeral')).toHaveText('0')
 
     await page.clock.runFor(60_000)
@@ -398,7 +398,7 @@ test.describe('day-based review scheduling', () => {
     await page.reload()
     await gotoApp(page, '?view=collections')
 
-    const dueTodayStat = page.locator('.almanac__stat').filter({ hasText: 'due today' })
+    const dueTodayStat = page.locator('.almanac__stat').filter({ has: page.locator('.almanac__label', { hasText: /^due$/ }) })
     await expect(dueTodayStat.locator('.almanac__numeral')).toHaveText('0')
 
     await page.clock.setSystemTime(new Date('2026-08-08T06:00:00.000Z'))

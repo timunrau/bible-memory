@@ -832,11 +832,8 @@
                 </svg>
                 <h3 class="collection-tile__name">{{ getCollectionName('master-list') }}</h3>
               </div>
-              <POSBadge v-if="dueVersesCount > 0" status="mastered" :due="true" />
             </div>
-            <div class="collection-tile__meta">
-              {{ totalVerseCount }} verse{{ totalVerseCount !== 1 ? 's' : '' }}
-            </div>
+            <CollectionSummary :summary="getCollectionStatus('master-list')" />
           </div>
 
           <!-- No Collection -->
@@ -853,11 +850,8 @@
                 </svg>
                 <h3 class="collection-tile__name">{{ getCollectionName('no-collection') }}</h3>
               </div>
-              <POSBadge v-if="getCollectionDueCount('no-collection') > 0" status="mastered" :due="true" />
             </div>
-            <div class="collection-tile__meta">
-              {{ getCollectionVerseCount('no-collection') }} verse{{ getCollectionVerseCount('no-collection') !== 1 ? 's' : '' }}
-            </div>
+            <CollectionSummary :summary="getCollectionStatus('no-collection')" />
           </div>
 
           <!-- To Learn -->
@@ -865,7 +859,6 @@
             v-if="hasToLearnVerses"
             @click="viewCollection('to-learn')"
             class="collection-tile cursor-pointer"
-            :class="{ 'collection-tile--due': getCollectionDueCount('to-learn') > 0 }"
           >
             <div class="flex items-start justify-between gap-2">
               <div class="flex items-center gap-2 flex-1 min-w-0">
@@ -874,11 +867,8 @@
                 </svg>
                 <h3 class="collection-tile__name">{{ getCollectionName('to-learn') }}</h3>
               </div>
-              <POSBadge v-if="getCollectionDueCount('to-learn') > 0" status="mastered" :due="true" />
             </div>
-            <div class="collection-tile__meta">
-              {{ getCollectionVerseCount('to-learn') }} verse{{ getCollectionVerseCount('to-learn') !== 1 ? 's' : '' }}
-            </div>
+            <CollectionSummary :summary="getCollectionStatus('to-learn')" :show-status="false" />
           </div>
 
           <!-- User Collections -->
@@ -893,7 +883,6 @@
             <div :class="['flex justify-between gap-2 pr-8', collection.description ? 'items-start' : 'items-center']">
               <h3 class="collection-tile__name flex-1">{{ collection.name }}</h3>
               <div class="absolute right-4 top-4 flex items-center gap-1">
-                <POSBadge v-if="getCollectionDueCount(collection.id) > 0" status="mastered" :due="true" />
                 <button
                   @click.stop="startEditCollection(collection)"
                   class="text-text-muted hover:text-accent hover:bg-surface-hover w-5 h-5 rounded-full transition-colors inline-flex items-center justify-center"
@@ -906,9 +895,7 @@
               </div>
             </div>
             <p v-if="collection.description" class="collection-tile__description line-clamp-2">{{ collection.description }}</p>
-            <div class="collection-tile__meta">
-              {{ getCollectionVerseCount(collection.id) }} verse{{ getCollectionVerseCount(collection.id) !== 1 ? 's' : '' }}
-            </div>
+            <CollectionSummary :summary="getCollectionStatus(collection.id)" />
           </div>
 
           </div>
@@ -1021,7 +1008,6 @@
               <div :class="['flex justify-between gap-2 pr-8', collection.description ? 'items-start' : 'items-center']">
                 <h3 class="collection-tile__name flex-1">{{ collection.name }}</h3>
                 <div class="absolute right-4 top-4 flex items-center gap-1">
-                  <POSBadge v-if="getCollectionDueCount(collection.id) > 0" status="mastered" :due="true" />
                   <button
                     @click.stop="startEditCollection(collection)"
                     class="text-text-muted hover:text-accent hover:bg-surface-hover w-5 h-5 rounded-full transition-colors inline-flex items-center justify-center"
@@ -1034,9 +1020,7 @@
                 </div>
               </div>
               <p v-if="collection.description" class="collection-tile__description line-clamp-2">{{ collection.description }}</p>
-              <div class="collection-tile__meta">
-                {{ getCollectionVerseCount(collection.id) }} verse{{ getCollectionVerseCount(collection.id) !== 1 ? 's' : '' }}
-              </div>
+              <CollectionSummary :summary="getCollectionStatus(collection.id)" />
             </div>
           </div>
 
@@ -2431,7 +2415,6 @@ import {
   canDeleteCollection as canDeleteCollectionRecord,
   getChildCollections,
   getCollectionAncestors,
-  getCollectionDueCount as getAggregateCollectionDueCount,
   getCollectionPath,
   getCollectionParentId,
   getCollectionVerses,
@@ -2486,6 +2469,7 @@ import PrimaryButton from './components/brand/PrimaryButton.vue'
 import SecondaryButton from './components/brand/SecondaryButton.vue'
 import HeadwordReference from './components/brand/HeadwordReference.vue'
 import POSBadge from './components/brand/POSBadge.vue'
+import CollectionSummary from './components/CollectionSummary.vue'
 
 ChartJS.register(
   CategoryScale, LinearScale, PointElement, LineElement,
@@ -2494,7 +2478,7 @@ ChartJS.register(
 
 export default {
   name: 'App',
-  components: { IOSInstallModal, VersePracticeView, CompletionTray, ModalSheet, AppDialog, CollectionPicker, VerseFormFields, CollectionsAlmanac, OnboardingCallout, SyncSettingsModal, BackupNudgeCard, Line, Bar, AppShell, BrandMark, PrimaryButton, SecondaryButton, HeadwordReference, POSBadge },
+  components: { IOSInstallModal, VersePracticeView, CompletionTray, ModalSheet, AppDialog, CollectionPicker, VerseFormFields, CollectionsAlmanac, OnboardingCallout, SyncSettingsModal, BackupNudgeCard, Line, Bar, AppShell, BrandMark, PrimaryButton, SecondaryButton, HeadwordReference, POSBadge, CollectionSummary },
   setup() {
     const verses = ref([])
     const collections = ref([])
@@ -3934,7 +3918,7 @@ export default {
 
     // Count verses due for review
     const dueVersesCount = computed(() => {
-      return verses.value.filter(v => isDueForReview(v)).length
+      return sumVerseReferenceCounts(verses.value.filter(v => isDueForReview(v)))
     })
 
     // Total verse count accounting for ranges (e.g., "Psalm 1:1-3" = 3 verses)
@@ -6374,7 +6358,7 @@ export default {
         return 'Uncategorized'
       }
       if (collectionId === 'to-learn') {
-        return 'Not Yet Mastered'
+        return 'Unmastered'
       }
       const collection = collections.value.find(c => c.id === collectionId)
       return collection ? collection.name : 'Unknown'
@@ -6382,41 +6366,30 @@ export default {
 
     // countVersesInReference imported from ./utils/verse-count.js
 
-    // Get verse count for a collection (accounts for verse ranges)
-    const getCollectionVerseCount = (collectionId) => {
-      let collectionVerses
-      if (collectionId === 'master-list') {
-        collectionVerses = verses.value
-      } else if (collectionId === 'no-collection') {
-        collectionVerses = verses.value.filter(v => {
-          const ids = v.collectionIds
-          return !ids || (Array.isArray(ids) && ids.length === 0)
-        })
-      } else if (collectionId === 'to-learn') {
-        collectionVerses = verses.value.filter(v => v.memorizationStatus !== 'mastered')
-      } else {
-        collectionVerses = getCollectionVerses(verses.value, collections.value, collectionId, { includeChildren: true })
+    // Cache totals and learning status from the same deduplicated collection scope.
+    const collectionStatusSummaries = computed(() => {
+      const summarize = (collectionVerses) => ({
+        total: sumVerseReferenceCounts(collectionVerses),
+        due: sumVerseReferenceCounts(collectionVerses.filter(isDueForReview)),
+        learning: sumVerseReferenceCounts(collectionVerses.filter(v => v.memorizationStatus !== 'mastered')),
+      })
+      const summaries = new Map([
+        ['master-list', summarize(verses.value)],
+        ['no-collection', summarize(verses.value.filter(v => !v.collectionIds || (Array.isArray(v.collectionIds) && v.collectionIds.length === 0)))],
+        ['to-learn', summarize(verses.value.filter(v => v.memorizationStatus !== 'mastered'))],
+      ])
+      for (const collection of collections.value) {
+        summaries.set(collection.id, summarize(
+          getCollectionVerses(verses.value, collections.value, collection.id, { includeChildren: true })
+        ))
       }
-      return sumVerseReferenceCounts(collectionVerses)
-    }
+      return summaries
+    })
 
-    // Get count of verses due for review in a collection
-    const getCollectionDueCount = (collectionId) => {
-      let collectionVerses
-      if (collectionId === 'master-list') {
-        collectionVerses = verses.value
-      } else if (collectionId === 'no-collection') {
-        collectionVerses = verses.value.filter(v => {
-          const ids = v.collectionIds
-          return !ids || (Array.isArray(ids) && ids.length === 0)
-        })
-      } else if (collectionId === 'to-learn') {
-        collectionVerses = verses.value.filter(v => v.memorizationStatus !== 'mastered')
-      } else {
-        return getAggregateCollectionDueCount(verses.value, collections.value, collectionId, isDueForReview)
-      }
-      return collectionVerses.filter(v => isDueForReview(v)).length
+    const getCollectionStatus = (collectionId) => {
+      return collectionStatusSummaries.value.get(collectionId) || { total: 0, due: 0, learning: 0 }
     }
+    const getCollectionDueCount = (collectionId) => getCollectionStatus(collectionId).due
 
     const cloneVerseSnapshot = (verse, index = -1) => ({
       index,
@@ -9714,7 +9687,7 @@ export default {
       editCollectionFormError,
       getCollectionPathLabel,
       getCollectionName,
-      getCollectionVerseCount,
+      getCollectionStatus,
       getCollectionDueCount,
       viewCollection,
       viewAllVerses,

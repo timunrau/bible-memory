@@ -94,7 +94,7 @@ test('view master-list, no-collection, to-learn with seeded verses', async ({ pa
 
   await expect(page.getByText('All Verses')).toBeVisible()
   await expect(page.getByText('Uncategorized')).toBeVisible()
-  await expect(page.getByText('Not Yet Mastered')).toBeVisible()
+  await expect(page.getByText('Unmastered', { exact: true })).toBeVisible()
 })
 
 test('deep collections aggregate deduplicated metrics while views show direct verses', async ({ page }) => {

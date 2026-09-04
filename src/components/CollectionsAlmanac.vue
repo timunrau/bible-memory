@@ -7,7 +7,7 @@
       </div>
       <div class="almanac__stat">
         <div class="almanac__numeral">{{ dueVersesCount }}</div>
-        <div class="almanac__label">due today</div>
+        <div class="almanac__label">due</div>
       </div>
       <div class="almanac__stat">
         <div class="almanac__numeral">{{ masteredCount }}</div>
