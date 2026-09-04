@@ -1,3 +1,10 @@
+# [1.50.0](https://github.com/timunrau/rum1n8/compare/v1.49.0...v1.50.0) (2026-09-04)
+
+
+### Features
+
+* show collection progress with consistent verse counts ([ee6809b](https://github.com/timunrau/rum1n8/commit/ee6809bf300140aa55b4e38cd7c049435f59356d))
+
 # [1.49.0](https://github.com/timunrau/rum1n8/compare/v1.48.2...v1.49.0) (2026-08-29)
 
 
