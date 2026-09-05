@@ -1,3 +1,10 @@
+## [1.50.1](https://github.com/timunrau/rum1n8/compare/v1.50.0...v1.50.1) (2026-09-05)
+
+
+### Bug Fixes
+
+* align verse list items consistently ([f42a605](https://github.com/timunrau/rum1n8/commit/f42a60511264580102a8515335dc6161ddbe8c40))
+
 # [1.50.0](https://github.com/timunrau/rum1n8/compare/v1.49.0...v1.50.0) (2026-09-04)
 
 
