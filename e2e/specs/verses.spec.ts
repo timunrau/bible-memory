@@ -393,7 +393,7 @@ test('edit verse: search on Verses tab -> edit -> change content -> save', async
   await page.getByRole('button', { name: /^Save$/i }).click()
 
   await expect(page.getByTestId('modal-edit-verse')).not.toBeVisible()
-  await expect(page.getByText('Updated verse content.')).toBeVisible()
+  await expect(page.getByTestId('search-screen').getByText('Updated verse content.')).toBeVisible()
 })
 
 test('edit verse: reference errors wait for blur and a version-only change reveals import', async ({ page }) => {

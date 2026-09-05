@@ -753,28 +753,16 @@
             Start review<span v-if="dueVersesCount > 0"> · {{ dueVersesCount }} due</span>
           </PrimaryButton>
 
-          <div
+          <VerseListItem
             v-for="verse in reviewSortedVerses"
             :key="verse.id"
+            :reference="verse.reference"
+            :bible-version="verse.bibleVersion"
+            :status="isDueForReview(verse) ? 'mastered' : ''"
+            :due="isDueForReview(verse)"
+            :meta="isDueForReview(verse) ? '' : getTimeUntilReview(verse)"
             @click="handleVerseClick(verse)"
-            class="verse-card"
-            :class="{ 'verse-card--due': isDueForReview(verse) }"
-          >
-            <div class="flex items-center justify-between gap-2">
-              <div class="flex flex-nowrap items-baseline gap-2 min-w-0 flex-1">
-                <HeadwordReference :reference="verse.reference" size="sm" />
-                <span v-if="verse.bibleVersion" class="verse-card__version shrink-0">/{{ verse.bibleVersion.toLowerCase() }}/</span>
-              </div>
-              <div class="flex items-center gap-1 shrink-0">
-                <POSBadge
-                  v-if="isDueForReview(verse)"
-                  status="mastered"
-                  :due="true"
-                />
-                <span v-else class="verse-card__meta">{{ getTimeUntilReview(verse) }}</span>
-              </div>
-            </div>
-          </div>
+          />
 
           <!-- Empty state when no verses to review -->
           <div v-if="reviewSortedVerses.length === 0" class="bg-chrome rounded-xl border border-border-default p-12 text-center mt-8">
@@ -1029,98 +1017,38 @@
           :key="verse.id"
           class="relative"
         >
-          <div
-            :ref="(el) => setVerseCardRef(verse.id, el)"
+          <VerseListItem
+            :ref="(item) => setVerseCardRef(verse.id, item)"
             @pointerdown="startVerseLongPress(verse, $event)"
             @pointerup="clearVerseLongPress"
             @pointercancel="clearVerseLongPress"
             @pointerleave="clearVerseLongPress"
             @click="handleVerseCardClick(verse)"
-            class="verse-card"
+            :reference="verse.reference"
+            :bible-version="verse.bibleVersion"
+            :status="verse.memorizationStatus !== 'mastered' || isDueForReview(verse) ? verse.memorizationStatus : ''"
+            :due="verse.memorizationStatus === 'mastered' && isDueForReview(verse)"
+            :meta="verse.memorizationStatus === 'mastered' && !isDueForReview(verse) ? getTimeUntilReview(verse) : ''"
+            :expandable="true"
+            :expanded="isVerseExpanded(verse)"
+            :selecting="isVerseSelectionMode"
+            :selected="isVerseSelected(verse)"
+            :show-edit="!isVerseSelectionMode"
             :class="[
               {
-                'verse-card--due': verse.memorizationStatus === 'mastered' && isDueForReview(verse),
-                'verse-card--expanded': isVerseExpanded(verse),
                 'verse-card--learning': verse.memorizationStatus !== 'mastered',
                 'verse-card--onboarding': shouldShowVerseOnboardingCallout && verse.id === guidedOnboardingVerseId,
-                'verse-card--selecting': isVerseSelectionMode,
-                'verse-card--selected': isVerseSelected(verse),
               },
               shouldShowVerseOnboardingCallout && verse.id === guidedOnboardingVerseId
                 ? 'z-40'
                 : ''
             ]"
-            :aria-selected="isVerseSelectionMode ? isVerseSelected(verse) : null"
+            @toggle-expanded="toggleVerseExpanded(verse, $event)"
+            @toggle-selected="toggleVerseSelected(verse)"
+            @edit="startEditVerse(verse)"
           >
-          <div class="flex gap-2 items-start">
-            <button
-              v-if="!isVerseSelectionMode"
-              type="button"
-              @click="toggleVerseExpanded(verse, $event)"
-              class="verse-leading-control shrink-0 rounded-full text-text-muted hover:bg-surface-hover hover:text-accent transition-all duration-200"
-              :class="{ 'rotate-90': isVerseExpanded(verse) }"
-              :aria-label="isVerseExpanded(verse) ? 'Collapse verse' : 'Expand verse'"
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-            <button
-              v-else
-              type="button"
-              @click.stop="toggleVerseSelected(verse)"
-              class="verse-leading-control verse-select-check"
-              :class="{ 'verse-select-check--checked': isVerseSelected(verse) }"
-              :aria-label="isVerseSelected(verse) ? 'Deselect verse' : 'Select verse'"
-            >
-              <svg v-if="isVerseSelected(verse)" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M5 13l4 4L19 7" />
-              </svg>
-            </button>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2 justify-between">
-                <div class="flex flex-nowrap items-baseline gap-2 min-w-0 flex-1">
-                  <HeadwordReference :reference="verse.reference" size="sm" />
-                  <span v-if="verse.bibleVersion" class="verse-card__version shrink-0">/{{ verse.bibleVersion.toLowerCase() }}/</span>
-                </div>
-                <div class="verse-card__actions flex items-center gap-1 shrink-0">
-                  <POSBadge
-                    v-if="verse.memorizationStatus !== 'mastered' || isDueForReview(verse)"
-                    :status="verse.memorizationStatus"
-                    :due="verse.memorizationStatus === 'mastered' && isDueForReview(verse)"
-                  />
-                  <span v-else class="verse-card__meta">{{ getTimeUntilReview(verse) }}</span>
-                  <button
-                    v-if="!isVerseSelectionMode"
-                    @click.stop="startEditVerse(verse)"
-                    class="text-text-muted hover:text-accent hover:bg-surface-hover p-1.5 rounded-full shrink-0 transition-colors"
-                    title="Edit verse"
-                  >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              <Transition
-                name="verse-expand"
-                @before-enter="beforeVerseExpand"
-                @enter="enterVerseExpand"
-                @after-enter="afterVerseExpand"
-                @before-leave="beforeVerseCollapse"
-                @leave="leaveVerseCollapse"
-                @after-leave="afterVerseCollapse"
-              >
-                <div
-                  v-if="isVerseExpanded(verse)"
-                  class="verse-card__body"
-                >
-                  {{ verse.content }}
-                </div>
-              </Transition>
-            </div>
-          </div>
-          </div>
+            <template #body>{{ verse.content }}</template>
+          </VerseListItem>
 
           <div
             v-if="shouldShowVerseOnboardingCallout && verse.id === guidedOnboardingVerseId"
@@ -2467,9 +2395,8 @@ import AppShell from './components/brand/AppShell.vue'
 import BrandMark from './components/brand/BrandMark.vue'
 import PrimaryButton from './components/brand/PrimaryButton.vue'
 import SecondaryButton from './components/brand/SecondaryButton.vue'
-import HeadwordReference from './components/brand/HeadwordReference.vue'
-import POSBadge from './components/brand/POSBadge.vue'
 import CollectionSummary from './components/CollectionSummary.vue'
+import VerseListItem from './components/VerseListItem.vue'
 
 ChartJS.register(
   CategoryScale, LinearScale, PointElement, LineElement,
@@ -2478,7 +2405,7 @@ ChartJS.register(
 
 export default {
   name: 'App',
-  components: { IOSInstallModal, VersePracticeView, CompletionTray, ModalSheet, AppDialog, CollectionPicker, VerseFormFields, CollectionsAlmanac, OnboardingCallout, SyncSettingsModal, BackupNudgeCard, Line, Bar, AppShell, BrandMark, PrimaryButton, SecondaryButton, HeadwordReference, POSBadge, CollectionSummary },
+  components: { IOSInstallModal, VersePracticeView, CompletionTray, ModalSheet, AppDialog, CollectionPicker, VerseFormFields, CollectionsAlmanac, OnboardingCallout, SyncSettingsModal, BackupNudgeCard, Line, Bar, AppShell, BrandMark, PrimaryButton, SecondaryButton, CollectionSummary, VerseListItem },
   setup() {
     const verses = ref([])
     const collections = ref([])
@@ -5338,68 +5265,6 @@ export default {
       const next = { ...expandedVerseIds.value }
       for (const v of sortedVerses.value) next[v.id] = expand
       expandedVerseIds.value = next
-    }
-
-    const beforeVerseExpand = (el) => {
-      el.style.height = '0'
-      el.style.opacity = '0'
-      el.style.transform = 'translateY(-6px)'
-    }
-
-    const enterVerseExpand = (el, done) => {
-      el.style.overflow = 'hidden'
-      void el.offsetHeight
-
-      requestAnimationFrame(() => {
-        el.style.height = `${el.scrollHeight}px`
-        el.style.opacity = '1'
-        el.style.transform = 'translateY(0)'
-      })
-
-      const onTransitionEnd = (event) => {
-        if (event.target !== el || event.propertyName !== 'height') return
-        el.removeEventListener('transitionend', onTransitionEnd)
-        done()
-      }
-
-      el.addEventListener('transitionend', onTransitionEnd)
-    }
-
-    const afterVerseExpand = (el) => {
-      el.style.height = 'auto'
-      el.style.overflow = ''
-    }
-
-    const beforeVerseCollapse = (el) => {
-      el.style.height = `${el.scrollHeight}px`
-      el.style.opacity = '1'
-      el.style.transform = 'translateY(0)'
-      el.style.overflow = 'hidden'
-    }
-
-    const leaveVerseCollapse = (el, done) => {
-      void el.offsetHeight
-
-      requestAnimationFrame(() => {
-        el.style.height = '0'
-        el.style.opacity = '0'
-        el.style.transform = 'translateY(-6px)'
-      })
-
-      const onTransitionEnd = (event) => {
-        if (event.target !== el || event.propertyName !== 'height') return
-        el.removeEventListener('transitionend', onTransitionEnd)
-        done()
-      }
-
-      el.addEventListener('transitionend', onTransitionEnd)
-    }
-
-    const afterVerseCollapse = (el) => {
-      el.style.height = ''
-      el.style.opacity = ''
-      el.style.transform = ''
-      el.style.overflow = ''
     }
 
     // Get time until review (or overdue) in a human-readable format
@@ -9600,12 +9465,6 @@ export default {
       toggleVerseExpanded,
       allCollectionVersesExpanded,
       toggleAllCollectionVersesExpanded,
-      beforeVerseExpand,
-      enterVerseExpand,
-      afterVerseExpand,
-      beforeVerseCollapse,
-      leaveVerseCollapse,
-      afterVerseCollapse,
       startMemorization,
       canSwitchToMode,
       switchToMemorizationMode,

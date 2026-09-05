@@ -4,7 +4,7 @@ import { computed } from 'vue'
 const props = defineProps({
   // One of: 'unmemorized' | 'learned' | 'memorized' | 'mastered'
   status: { type: String, required: true },
-  // If true, a 'mastered' verse becomes '[due]' instead of '[mastered]'
+  // If true, a 'mastered' verse becomes 'due' instead of 'mastered'
   due: { type: Boolean, default: false },
 })
 
@@ -32,55 +32,30 @@ const variant = computed(() => {
 </script>
 
 <template>
-  <span class="pos-badge-el" :class="[`pos-badge-el--${variant}`]">
-    <span class="pos-badge-el__bracket">[</span>{{ label }}<span class="pos-badge-el__bracket">]</span>
-  </span>
+  <span class="pos-badge-el" :class="[`pos-badge-el--${variant}`]">{{ label }}</span>
 </template>
 
 <style scoped>
 .pos-badge-el {
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-size: 0.85rem;
-  line-height: 1;
+  display: inline-block;
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.2;
   letter-spacing: 0;
   white-space: nowrap;
-  display: inline-block;
-  padding: 0.15em 0.5em;
-  border-radius: 999px;
-}
-
-.pos-badge-el__bracket {
-  opacity: 0.55;
-  margin: 0 0.05em;
 }
 
 .pos-badge-el--progress {
-  color: var(--color-text-secondary);
+  color: var(--color-status-progress-text);
 }
 
 .pos-badge-el--mastered {
-  color: var(--color-accent-strong);
-  border: 1px solid var(--color-border-default);
+  color: var(--color-text-muted);
 }
 
 .pos-badge-el--due {
-  font-family: var(--font-sans);
-  font-style: normal;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-weight: 600;
   color: var(--color-status-due-text);
-  background: var(--color-status-due-bg);
-  border: 1px solid var(--color-status-due-border);
-}
-
-.dark .pos-badge-el--due {
-  color: var(--color-status-due-text);
-  background: var(--color-status-due-bg);
-}
-
-.dark .pos-badge-el--mastered {
-  color: var(--color-accent-strong);
 }
 </style>

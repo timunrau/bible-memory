@@ -272,8 +272,8 @@ test('duplicate sibling names are rejected when moving a collection', async ({ p
   await expect(page.getByTestId('modal-edit-collection')).toBeVisible()
 })
 
-test('long numbered reference truncates the book without wrapping the verse reference', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 })
+test('narrow mobile row truncates the book without wrapping the verse reference', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 844 })
 
   const now = new Date().toISOString()
   await seedStorage(page, [
@@ -306,6 +306,7 @@ test('long numbered reference truncates the book without wrapping the verse refe
     const bookRect = book.getBoundingClientRect()
     const verseRect = verse.getBoundingClientRect()
     const versionRect = version.getBoundingClientRect()
+    const referenceRect = el.getBoundingClientRect()
 
     return {
       bookClientWidth: book.clientWidth,
@@ -317,6 +318,8 @@ test('long numbered reference truncates the book without wrapping the verse refe
       verseBottom: verseRect.bottom,
       versionTop: versionRect.top,
       versionBottom: versionRect.bottom,
+      referenceHeight: referenceRect.height,
+      verseHeight: verseRect.height,
     }
   })
 
@@ -326,6 +329,7 @@ test('long numbered reference truncates the book without wrapping the verse refe
   expect(Math.abs(layout.bookTop - layout.verseTop)).toBeLessThan(2)
   expect(layout.versionTop).toBeLessThan(layout.verseBottom)
   expect(layout.versionBottom).toBeGreaterThan(layout.verseTop)
+  expect(Math.abs(layout.referenceHeight - layout.verseHeight)).toBeLessThan(2)
 })
 
 test('empty state: no collections shows verse list or create CTA', async ({ page }) => {
