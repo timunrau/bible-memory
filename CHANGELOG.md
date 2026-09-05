@@ -1,3 +1,10 @@
+## [1.50.2](https://github.com/timunrau/rum1n8/compare/v1.50.1...v1.50.2) (2026-09-05)
+
+
+### Bug Fixes
+
+* refine verse status colors ([147eecd](https://github.com/timunrau/rum1n8/commit/147eecdadde47ab562a6b55be3b48c7c3c62baf4))
+
 ## [1.50.1](https://github.com/timunrau/rum1n8/compare/v1.50.0...v1.50.1) (2026-09-05)
 
 
