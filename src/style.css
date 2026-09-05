@@ -62,7 +62,7 @@
     /* Status tokens (tuned for cream surfaces) */
     --color-status-due-bg: #F3E5C2;
     --color-status-due-border: #DCC47F;
-    --color-status-due-text: #9A3F1C;
+    --color-status-due-text: var(--color-accent-warm-text);
     --color-status-progress-text: #17633F;
     --color-status-success-bg: #E4EFE6;
     --color-status-success-border: #B7CDBB;
@@ -131,8 +131,8 @@
 
     --color-status-due-bg: #2B2516;
     --color-status-due-border: #6B5A2C;
-    --color-status-due-text: #F2AA63;
-    --color-status-progress-text: #8BD7AD;
+    --color-status-due-text: var(--color-accent-warm);
+    --color-status-progress-text: #70A184;
     --color-status-success-bg: #142019;
     --color-status-success-border: #355D47;
     --color-status-success-text: #B7D4C1;
